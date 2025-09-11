@@ -27,8 +27,9 @@ def send_email(report_path, recipient_email):
         report_name = os.path.basename(report_path)
         msg.add_attachment(report_data, maintype='application', subtype='octet-stream', filename=report_name)
 
-    with smtplib.SMTP('smtp.npomis.ru', 587) as smtp:
-        smtp.login(sender_email, sender_password)
+    with smtplib.SMTP('smtp.npomis.ru', 25) as smtp:
+        smtp.starttls()
+        smtp.login("ayurkevich", sender_password)
         smtp.send_message(msg)
 
 def daily_task():
