@@ -1,25 +1,35 @@
-import requests
-import json
+import sqlite3
 
-config = {}
 
-def load_config():
-    global config
-    with open('config', 'r') as config_file:
-        config = json.load(config_file)
 
-def analize():
+def init_session():
+    global cookies
     user = {"user": config["user"]["username"], "email": config["user"]["email"], "password": config["user"]["password"]}
     url = '%s/api/auth/login'%(config["url_cvat"])
     response = requests.post(url, json=user)
     if response.status_code == 200:
         cookies = response.cookies
 
-        url = '%s/api/jobs/2'%(config["url_cvat"])
 
-        response = requests.get(url, cookies=cookies)
+def analize():
+    global cookies
+    url = '%s/api/jobs/2'%(config["url_cvat"])
 
-        print(response.json())
+    response = requests.get(url, cookies=cookies)
+
+    print(response.json())
+
+    db = sqlite3.connect('reports_cvat.db')
+
+    cursor = db.cursor()
+
+    # request =
+
+    # cursor.execute('')
+
+    db.close()
+
+
 
 
 def main():
