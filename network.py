@@ -5,8 +5,10 @@ import json
 class Networking:
     def __init__(self):
         self.config = {}
-        self.cookies = ''
+        # self.cookies = ''
         self.load_config()
+        self.session = requests.session()
+        self.headers = {}
 
     def load_config(self):
         with open('config', 'r') as config_file:
@@ -15,12 +17,14 @@ class Networking:
     def init_session(self):
         user = {"user": self.config["user"]["username"], "email": self.config["user"]["email"], "password": self.config["user"]["password"]}
         url = '%s/api/auth/login'%(self.config["url_cvat"])
+
         try:
-            response = requests.post(url, json=user)
+            response = self.session.post(url, json=user)
         except:
             return False
+        self.headers = {'X-CSRFToken': self.session.cookies.get('csrftoken')}
+        print(self.session.cookies.get('csrftoken'))
         if response.status_code == 200:
-            self.cookies = response.cookies
             return True
         else:
             return False
@@ -28,12 +32,11 @@ class Networking:
     def close_session(self):
         url = '%s/api/auth/logout'%(self.config["url_cvat"])
         try:
-            response = requests.post(url, cookies=self.cookies)
+            response = self.session.post(url, headers=self.headers)
         except:
             return False
         print(response.json())
         if response.status_code == 200:
-            self.cookies = response.cookies
             return True
         else:
             return False
@@ -41,13 +44,22 @@ class Networking:
     def get_projects(self):
         url = '%s/api/projects'%(self.config["url_cvat"])
         try:
-            response = requests.get(url, cookies=self.cookies)
+            response = self.session.get(url)
         except:
             return None
         print(response.json())
         return response.json()
 
-# net = Networking()
-# net.init_session()
-# net.get_projects()
-# net.close_session()
+    def get_tasks(self):
+        url = '%s/api/tasks'%(self.config["url_cvat"])
+        try:
+            response = self.session.get(url)
+        except:
+            return None
+        print(response.json())
+        return response.json()
+
+net = Networking()
+net.init_session()
+net.get_tasks()
+net.close_session()
