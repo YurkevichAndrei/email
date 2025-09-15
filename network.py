@@ -59,7 +59,25 @@ class Networking:
         print(response.json())
         return response.json()
 
-net = Networking()
-net.init_session()
-net.get_tasks()
-net.close_session()
+    def get_users(self):
+        url = '%s/api/users'%(self.config["url_cvat"])
+        try:
+            response = self.session.get(url)
+        except:
+            return None
+        print(response.json())
+        return response.json()
+
+    def get_jobs(self):
+        url = '%s/api/jobs'%(self.config["url_cvat"])
+        try:
+            response = self.session.get(url)
+        except:
+            return None
+        print(response.json())
+        return response.json()
+
+# net = Networking()
+# net.init_session()
+# net.get_jobs()
+# net.close_session()
