@@ -15,7 +15,7 @@ class Networking:
             self.config = json.load(config_file)
 
     def init_session(self):
-        user = {"user": self.config["user"]["username"], "email": self.config["user"]["email"], "password": self.config["user"]["password"]}
+        user = {"username": self.config["user"]["username"], "email": self.config["user"]["email"], "password": self.config["user"]["password"]}
         url = '%s/api/auth/login'%(self.config["url_cvat"])
 
         try:
@@ -71,7 +71,34 @@ class Networking:
     def get_jobs(self):
         url = '%s/api/jobs'%(self.config["url_cvat"])
         try:
+            response = self.session.get(url, params=[('page_size', 200)])
+        except:
+            return None
+        print(response.json())
+        return response.json()
+
+    def get_job(self, job_id):
+        url = '%s/api/jobs/%d'%(self.config["url_cvat"], job_id)
+        try:
             response = self.session.get(url)
+        except:
+            return None
+        print(response.json())
+        return response.json()
+
+    def get_job_annotations(self, job_id: int):
+        url = '%s/api/jobs/%d/annotations'%(self.config["url_cvat"], job_id)
+        try:
+            response = self.session.get(url, params=[('page_size', 200)])
+        except:
+            return None
+        # print(response.json())
+        return response.json()
+
+    def get_labels(self, job_id):
+        url = '%s/api/labels'%(self.config["url_cvat"])
+        try:
+            response = self.session.get(url, params=[('job_id', job_id), ('page_size', 200)])
         except:
             return None
         print(response.json())
@@ -79,5 +106,5 @@ class Networking:
 
 # net = Networking()
 # net.init_session()
-# net.get_jobs()
+# net.get_labels(368)
 # net.close_session()

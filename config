@@ -1,8 +1,8 @@
 {
-  "url_cvat": "http://192.168.4.88:8080",
+  "url_cvat": "http://neuron.npomis.ru:8080",
   "user": {
-    "username": "user",
-    "email": "a@a.ru",
-    "password": "12345678"
+    "username": "spopov",
+    "email": "spopov@npomis.ru",
+    "password": "C6hd4z4n!"
   }
 }

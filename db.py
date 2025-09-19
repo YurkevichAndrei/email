@@ -2,14 +2,16 @@ import sqlite3
 import os
 
 from network import Networking
-# from parameters_selection import ParametersSelection
+
+
+from parameters_selection import ParametersSelection
 
 class DataBase:
     def __init__(self):
         self.network = Networking()
         self.network.init_session()
 
-        db_file = 'reports_cvat__.db'
+        db_file = 'reports_cvat_neuron.db'
         if os.path.isfile(db_file):
             self.db = sqlite3.connect(db_file)
         else:
@@ -51,7 +53,7 @@ class DataBase:
         cursor.execute(request)
         self.db.commit()
 
-        request = 'CREATE TABLE Users (id int primary key , username varchar(100), email varchar(100), first_name varchar(100), last_name varchar(100))'
+        request = 'CREATE TABLE Users (id int primary key , username varchar(100), first_name varchar(100), last_name varchar(100))'
         cursor.execute(request)
         self.db.commit()
 
@@ -74,7 +76,7 @@ class DataBase:
         cursor.execute(request)
         self.db.commit()
 
-        request = '''CREATE TABLE Reports (id int primary key,
+        request = '''CREATE TABLE Reports (id INTEGER primary key AUTOINCREMENT,
         user_id int,
         datetime datetime,
         jobs_count_today int,
@@ -95,7 +97,7 @@ class DataBase:
         cursor.execute(request)
         self.db.commit()
 
-        request = 'INSERT INTO Users (id, username, email, first_name, last_name) VALUES (-1, "-", "-", "-", "-")'
+        request = 'INSERT INTO Users (id, username, first_name, last_name) VALUES (-1, "-", "-", "-")'
         cursor.execute(request)
         self.db.commit()
 
@@ -148,9 +150,9 @@ class DataBase:
                 separator = ', '
                 if data == '':
                     separator = ''
-                data = separator.join([data, '(%d, "%s", "%s", "%s", "%s")' % (user['id'], user['username'], user['email'], user['first_name'], user['last_name'])])
+                data = separator.join([data, '(%d, "%s", "%s", "%s")' % (user['id'], user['username'], user['first_name'], user['last_name'])])
 
-        self.insert('Users', ['id', 'username', 'email', 'first_name', 'last_name'], data)
+        self.insert('Users', ['id', 'username', 'first_name', 'last_name'], data)
 
     def update_db_jobs(self):
         if self.db is None:
@@ -193,12 +195,93 @@ class DataBase:
     def difference_list_id(self, table_name: str, objects):
         id_list = sorted([obj['id'] for obj in objects])
         selection = sorted(self.select(table_name, ['id']))
+        selection = [select[0] for select in selection]
         return set(id_list) - set(selection)
+
+    def update_db_reports(self):
+        if self.db is None:
+            return False
+        # сбор информации о количестве задач, изображений и объектов
+        reports = {}
+        jobs = self.network.get_jobs()['results']
+        for job in jobs:
+            assignee = job['assignee']
+            assignee_id = -1
+            if not (assignee is None):
+                assignee_id = assignee['id']
+            if reports.get(assignee_id) is None:
+                reports[assignee_id] = {'jobs': [], 'frames': [], 'shapes': []}
+
+            report = reports.get(assignee_id)
+            report['jobs'] = self.add_if_not_exists(report['jobs'], job['id'])
+
+            annotations = self.network.get_job_annotations(job['id'])
+            for shape in annotations['shapes']:
+                report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
+                report['shapes'] = self.add_if_not_exists(report['shapes'], shape['id'])
+
+        print(reports)
+        # расчет количества элементов списков и внесение изменений в бд
+        for assignee_id, report in reports.items():
+            ps = ParametersSelection()
+            ps.add_equal('user_id', assignee_id, value_type=type(assignee_id))
+            # id последнего отчета для пользователя assignee_id
+            selection = self.select('Reports', ['max(id)'], ps.get_parameters_selection())
+            last_id_report_user = -1
+            values = ''
+            # если уже есть отчета для пользователя assignee_id
+            if not (selection[0][0] is None):
+                last_id_report_user = selection[0][0]
+            # если отчетов нет
+            else:
+                values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id, "datetime('now')", 0, len(report['jobs']), 0, len(report['frames']), 0, len(report['shapes']))
+            self.insert('Reports', ['user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
+                                    'frames_count_today', 'frames_count_all_finish', 'shapes_count_today', 'shape_count_all'], values)
+
+
+
+
+# {
+#     1: {
+#         'jobs': [1, 2, 3 ...],
+#         'frames': [1, 2, 3 ...],
+#         'shapes': [1, 2, 3 ...]
+#     },
+#     2: {
+#         'jobs': [1, 2, 3 ...],
+#         'frames': [1, 2, 3 ...],
+#         'shapes': [1, 2, 3 ...]
+#     },
+# }
+#         нужно посчитать общее количество задач, общее количество фреймов и общее количество шейпов для каждого пользователя через запрос аннтотэйшен
+    @staticmethod
+    def add_if_not_exists(lst, value):
+        """
+        Проверяет, есть ли значение в списке.
+        Если нет - добавляет и возвращает новый список.
+        Если есть - возвращает список без изменений.
+
+        Args:
+            lst (list): Входной список
+            value: Значение для проверки и добавления
+
+        Returns:
+            list: Обновленный список или исходный список
+        """
+        if value not in lst:
+            # Создаем копию списка, чтобы не изменять оригинал
+            new_list = lst.copy()
+            new_list.append(value)
+            return new_list
+        else:
+            return lst
 
 #TODO дальше нужно реализовать формирования записей в таблице reports
 
 db = DataBase()
-db.init_db()
+db.update_db_reports()
+# db.update_db_projects()
+# db.init_db()
 # db.init_db_users()
 # db.init_db_projects()
 # db.init_db_tasks()
