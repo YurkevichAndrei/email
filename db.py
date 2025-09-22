@@ -2,8 +2,6 @@ import sqlite3
 import os
 
 from network import Networking
-
-
 from parameters_selection import ParametersSelection
 
 class DataBase:
@@ -13,9 +11,9 @@ class DataBase:
 
         db_file = 'reports_cvat_neuron.db'
         if os.path.isfile(db_file):
-            self.db = sqlite3.connect(db_file)
+            self.db = sqlite3.connect(db_file, timeout=30)
         else:
-            self.db = sqlite3.connect(db_file)
+            self.db = sqlite3.connect(db_file, timeout=30)
             self.init_db()
 
     def __del__(self):
@@ -28,19 +26,22 @@ class DataBase:
         cursor = self.db.cursor()
         cursor.execute(request)
         self.db.commit()
+        cursor.close()
 
     def select(self, table_name: str, columns: list[str], constraints: list[str] = ()):
         request = f'SELECT {', '.join([c for c in columns])} FROM {table_name}'
         if len(constraints) != 0:
             constr = ' AND '.join([c for c in constraints])
             request = ' WHERE '.join([request, constr])
+        # with closing(self.db.cursor()) as cursor:
         cursor = self.db.cursor()
         cursor.execute(request)
-        return cursor.fetchall()
+        res = cursor.fetchall()
+        cursor.close()
+        return res
 
     def create_db(self):
         cursor = self.db.cursor()
-
         request = 'CREATE TABLE Projects (id int primary key , name varchar(200))'
         cursor.execute(request)
         self.db.commit()
@@ -100,6 +101,7 @@ class DataBase:
         request = 'INSERT INTO Users (id, username, first_name, last_name) VALUES (-1, "-", "-", "-")'
         cursor.execute(request)
         self.db.commit()
+        cursor.close()
 
     # методы инициализаций таблиц нужно переделать под обновления,
     # чтобы можно было использовать при добавлении новых данных
@@ -227,11 +229,27 @@ class DataBase:
             ps.add_equal('user_id', assignee_id, value_type=type(assignee_id))
             # id последнего отчета для пользователя assignee_id
             selection = self.select('Reports', ['max(id)'], ps.get_parameters_selection())
+            # print(selection)
             last_id_report_user = -1
             values = ''
-            # если уже есть отчета для пользователя assignee_id
+            # если уже есть отчет для пользователя assignee_id
             if not (selection[0][0] is None):
                 last_id_report_user = selection[0][0]
+                # надо взять данные прошлого отчета и вычесть их из актуальных данных, получим данные за прошедший период
+                ps = ParametersSelection()
+                # id последнего отчета для пользователя assignee_id
+                ps.add_equal('id', last_id_report_user, value_type=type(last_id_report_user))
+                selection_all_params = self.select('Reports',
+                                                   ['jobs_count_all_finish', 'frames_count_all_finish', 'shape_count_all'],
+                                                   ps.get_parameters_selection())
+                values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id,
+                                                               "datetime('now')",
+                                                               len(report['jobs']) - selection_all_params[0][0],
+                                                               len(report['jobs']),
+                                                               len(report['frames']) - selection_all_params[0][1],
+                                                               len(report['frames']),
+                                                               len(report['shapes']) - selection_all_params[0][2],
+                                                               len(report['shapes']))
             # если отчетов нет
             else:
                 values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id, "datetime('now')", 0, len(report['jobs']), 0, len(report['frames']), 0, len(report['shapes']))
