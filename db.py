@@ -12,6 +12,10 @@ class DataBase:
         db_file = 'reports_cvat_neuron.db'
         if os.path.isfile(db_file):
             self.db = sqlite3.connect(db_file, timeout=30)
+            self.update_db_projects()
+            self.update_db_tasks()
+            self.update_db_users()
+            self.update_db_jobs()
         else:
             self.db = sqlite3.connect(db_file, timeout=30)
             self.init_db()
@@ -103,8 +107,6 @@ class DataBase:
         self.db.commit()
         cursor.close()
 
-    # методы инициализаций таблиц нужно переделать под обновления,
-    # чтобы можно было использовать при добавлении новых данных
     def update_db_projects(self):
         if self.db is None:
             return False
@@ -203,26 +205,10 @@ class DataBase:
     def update_db_reports(self):
         if self.db is None:
             return False
-        # сбор информации о количестве задач, изображений и объектов
-        reports = {}
-        jobs = self.network.get_jobs()['results']
-        for job in jobs:
-            assignee = job['assignee']
-            assignee_id = -1
-            if not (assignee is None):
-                assignee_id = assignee['id']
-            if reports.get(assignee_id) is None:
-                reports[assignee_id] = {'jobs': [], 'frames': [], 'shapes': []}
 
-            report = reports.get(assignee_id)
-            report['jobs'] = self.add_if_not_exists(report['jobs'], job['id'])
-
-            annotations = self.network.get_job_annotations(job['id'])
-            for shape in annotations['shapes']:
-                report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
-                report['shapes'] = self.add_if_not_exists(report['shapes'], shape['id'])
-
+        reports = self.generate_reports()
         print(reports)
+
         # расчет количества элементов списков и внесение изменений в бд
         for assignee_id, report in reports.items():
             ps = ParametersSelection()
@@ -252,26 +238,13 @@ class DataBase:
                                                                len(report['shapes']))
             # если отчетов нет
             else:
-                values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id, "datetime('now')", 0, len(report['jobs']), 0, len(report['frames']), 0, len(report['shapes']))
+                values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id, "datetime('now')",
+                                                               len(report['jobs']), len(report['jobs']),
+                                                               len(report['frames']), len(report['frames']),
+                                                               len(report['shapes']), len(report['shapes']))
             self.insert('Reports', ['user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
                                     'frames_count_today', 'frames_count_all_finish', 'shapes_count_today', 'shape_count_all'], values)
 
-
-
-
-# {
-#     1: {
-#         'jobs': [1, 2, 3 ...],
-#         'frames': [1, 2, 3 ...],
-#         'shapes': [1, 2, 3 ...]
-#     },
-#     2: {
-#         'jobs': [1, 2, 3 ...],
-#         'frames': [1, 2, 3 ...],
-#         'shapes': [1, 2, 3 ...]
-#     },
-# }
-#         нужно посчитать общее количество задач, общее количество фреймов и общее количество шейпов для каждого пользователя через запрос аннтотэйшен
     @staticmethod
     def add_if_not_exists(lst, value):
         """
@@ -294,12 +267,38 @@ class DataBase:
         else:
             return lst
 
-#TODO дальше нужно реализовать формирования записей в таблице reports
+    def generate_reports(self):
+        # {
+        #     1: {
+        #         'jobs': [1, 2, 3 ...],
+        #         'frames': [1, 2, 3 ...],
+        #         'shapes': [1, 2, 3 ...]
+        #     },
+        #     2: {
+        #         'jobs': [1, 2, 3 ...],
+        #         'frames': [1, 2, 3 ...],
+        #         'shapes': [1, 2, 3 ...]
+        #     },
+        # }
+        # сбор информации о количестве задач, изображений и объектов
+        reports = {}
+        jobs = self.network.get_jobs()['results']
+        for job in jobs:
+            assignee = job['assignee']
+            assignee_id = -1
+            if not (assignee is None):
+                assignee_id = assignee['id']
+            if reports.get(assignee_id) is None:
+                reports[assignee_id] = {'jobs': [], 'frames': [], 'shapes': []}
 
-db = DataBase()
-db.update_db_reports()
-# db.update_db_projects()
-# db.init_db()
-# db.init_db_users()
-# db.init_db_projects()
-# db.init_db_tasks()
+            report = reports.get(assignee_id)
+            report['jobs'] = self.add_if_not_exists(report['jobs'], job['id'])
+
+            annotations = self.network.get_job_annotations(job['id'])
+            for shape in annotations['shapes']:
+                report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
+                report['shapes'] = self.add_if_not_exists(report['shapes'], shape['id'])
+        return reports
+
+# db = DataBase()
+# db.update_db_reports()
