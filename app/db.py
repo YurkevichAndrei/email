@@ -196,6 +196,12 @@ class DataBase:
         self.update_db_users()
         self.update_db_jobs()
 
+    def update_db(self):
+        self.update_db_projects()
+        self.update_db_tasks()
+        self.update_db_users()
+        self.update_db_jobs()
+
     def difference_list_id(self, table_name: str, objects):
         id_list = sorted([obj['id'] for obj in objects])
         selection = sorted(self.select(table_name, ['id']))

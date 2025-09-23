@@ -1,8 +1,20 @@
 {
-  "url_cvat": "http://neuron.npomis.ru:8080",
-  "user": {
-    "username": "spopov",
-    "email": "spopov@npomis.ru",
-    "password": "C6hd4z4n!"
-  }
+    "cvat": {
+        "url": "http://neuron.npomis.ru:8080",
+        "user": {
+            "username": "spopov",
+            "email": "spopov@npomis.ru",
+            "password": "C6hd4z4n!"
+        }
+    },
+    "email": {
+        "sender": {
+            "username": "ayurkevich",
+            "email": "ayurkevich@npomis.ru",
+            "password": "ePu9ahga"
+        },
+        "recipient": {
+            "email": "ad6803884@yandex.ru"
+        }
+    }
 }

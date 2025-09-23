@@ -2,8 +2,9 @@ from datetime import datetime
 import smtplib
 import os
 from email.message import EmailMessage
-import schedule
-import time
+from openpyxl import Workbook
+
+from db import DataBase
 
 def generate_report():
     report_content = f"Ежедневный отчет за {datetime.now().strftime('%Y-%m-%d')}\n\nДанные отчета..."
@@ -36,11 +37,62 @@ def daily_task():
     report_path = generate_report()
     send_email(report_path, "ad6803884@yandex.ru")
 
-daily_task()
-# schedule.every().day.at("08:00").do(daily_task)
-#
-# print("Запуск ежедневного задания для отправки отчетов по электронной почте.")
-#
-# while True:
-#     schedule.run_pending()
-#     time.sleep(1)
+def transform_data(input_dict):
+    """
+    Преобразует словарь с данными пользователей в список словарей с количеством элементов.
+
+    Args:
+        input_dict (dict): Исходный словарь формата {user_id: {category: list, ...}}
+
+    Returns:
+        list: Список словарей формата [{user_id: int, category: count, ...}]
+    """
+    result = []
+
+    for user_id, user_data in input_dict.items():
+        user_dict = {'user_id': user_id}
+
+        for category, items in user_data.items():
+            # Добавляем количество элементов для каждой категории
+            user_dict[category] = len(items)
+
+        result.append(user_dict)
+
+    return result
+
+def create_excel_from_dict_list(dict_list: list, output_filename: str, sheet_name='Sheet1'):
+    # Создаем директорию, если она не существует
+    if not os.path.exists('excel_files'):
+        os.makedirs('excel_files')
+
+    filepath = os.path.join('excel_files', output_filename)
+
+    # Создаем новую книгу Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = sheet_name
+
+    # Записываем данные из списка словарей в Excel
+    if dict_list:
+        header = list(dict_list[0].keys())
+        ws.append(header)  # Записываем заголовки
+
+        for row in dict_list:
+            ws.append([row[col] for col in header])
+
+    # Автоматическое изменение ширины столбцов
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws.column_dimensions[column].width = adjusted_width
+
+    # Сохраняем файл
+    wb.save(filepath)
+    return filepath
