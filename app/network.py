@@ -15,8 +15,8 @@ class Networking:
             self.config = json.load(config_file)
 
     def init_session(self):
-        user = {"username": self.config["user"]["username"], "email": self.config["user"]["email"], "password": self.config["user"]["password"]}
-        url = '%s/api/auth/login'%(self.config["url_cvat"])
+        user = {"username": self.config["cvat"]["user"]["username"], "email": self.config["cvat"]["user"]["email"], "password": self.config["cvat"]["user"]["password"]}
+        url = '%s/api/auth/login'%(self.config["cvat"]["url"])
 
         try:
             response = self.session.post(url, json=user)
@@ -30,7 +30,7 @@ class Networking:
             return False
 
     def close_session(self):
-        url = '%s/api/auth/logout'%(self.config["url_cvat"])
+        url = '%s/api/auth/logout'%(self.config["cvat"]["url"])
         try:
             response = self.session.post(url, headers=self.headers)
         except:
@@ -42,34 +42,34 @@ class Networking:
             return False
 
     def get_projects(self):
-        url = '%s/api/projects'%(self.config["url_cvat"])
+        url = '%s/api/projects'%(self.config["cvat"]["url"])
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, params=[('page_size', 200)])
         except:
             return None
         print(response.json())
         return response.json()
 
     def get_tasks(self):
-        url = '%s/api/tasks'%(self.config["url_cvat"])
+        url = '%s/api/tasks'%(self.config["cvat"]["url"])
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, params=[('page_size', 2000)])
         except:
             return None
         print(response.json())
         return response.json()
 
     def get_users(self):
-        url = '%s/api/users'%(self.config["url_cvat"])
+        url = '%s/api/users'%(self.config["cvat"]["url"])
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, params=[('page_size', 200)])
         except:
             return None
         print(response.json())
         return response.json()
 
     def get_jobs(self):
-        url = '%s/api/jobs'%(self.config["url_cvat"])
+        url = '%s/api/jobs'%(self.config["cvat"]["url"])
         try:
             response = self.session.get(url, params=[('page_size', 200)])
         except:
@@ -78,25 +78,25 @@ class Networking:
         return response.json()
 
     def get_job(self, job_id):
-        url = '%s/api/jobs/%d'%(self.config["url_cvat"], job_id)
+        url = '%s/api/jobs/%d'%(self.config["cvat"]["url"], job_id)
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, params=[('page_size', 5000)])
         except:
             return None
         print(response.json())
         return response.json()
 
     def get_job_annotations(self, job_id: int):
-        url = '%s/api/jobs/%d/annotations'%(self.config["url_cvat"], job_id)
+        url = '%s/api/jobs/%d/annotations'%(self.config["cvat"]["url"], job_id)
         try:
-            response = self.session.get(url, params=[('page_size', 200)])
+            response = self.session.get(url, params=[('page_size', 2000)])
         except:
             return None
         # print(response.json())
         return response.json()
 
     def get_labels(self, job_id):
-        url = '%s/api/labels'%(self.config["url_cvat"])
+        url = '%s/api/labels'%(self.config["cvat"]["url"])
         try:
             response = self.session.get(url, params=[('job_id', job_id), ('page_size', 200)])
         except:
@@ -106,5 +106,5 @@ class Networking:
 
 # net = Networking()
 # net.init_session()
-# net.get_labels(368)
+# net.get_users()
 # net.close_session()

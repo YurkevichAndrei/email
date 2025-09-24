@@ -8,6 +8,10 @@
         }
     },
     "email": {
+        "smtp": {
+            "host": "smtp.npomis.ru",
+            "port": 25
+        },
         "sender": {
             "username": "ayurkevich",
             "email": "ayurkevich@npomis.ru",
@@ -16,5 +20,8 @@
         "recipient": {
             "email": "ad6803884@yandex.ru"
         }
+    },
+    "report": {
+        "folder_path": "reports"
     }
 }

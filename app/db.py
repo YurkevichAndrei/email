@@ -8,16 +8,14 @@ class DataBase:
     def __init__(self):
         self.network = Networking()
         self.network.init_session()
+        self.db = None
 
         db_file = 'reports_cvat_neuron.db'
         if os.path.isfile(db_file):
-            self.db = sqlite3.connect(db_file, timeout=30)
-            self.update_db_projects()
-            self.update_db_tasks()
-            self.update_db_users()
-            self.update_db_jobs()
+            self.db = sqlite3.connect(db_file, timeout=30.0)
+            self.update_db()
         else:
-            self.db = sqlite3.connect(db_file, timeout=30)
+            self.db = sqlite3.connect(db_file, timeout=30.0)
             self.init_db()
 
     def __del__(self):
@@ -25,19 +23,19 @@ class DataBase:
         self.db.close()
 
     def insert(self, table_name: str, params: list[str], values: str):
-        params = ', '.join([p for p in params])
-        request = 'INSERT INTO %s (%s) VALUES %s' % (table_name, params, values)
-        cursor = self.db.cursor()
-        cursor.execute(request)
-        self.db.commit()
-        cursor.close()
+        if values != '':
+            params = ', '.join([p for p in params])
+            request = 'INSERT INTO %s (%s) VALUES %s' % (table_name, params, values)
+            cursor = self.db.cursor()
+            cursor.execute(request)
+            self.db.commit()
+            cursor.close()
 
     def select(self, table_name: str, columns: list[str], constraints: list[str] = ()):
         request = f'SELECT {', '.join([c for c in columns])} FROM {table_name}'
         if len(constraints) != 0:
             constr = ' AND '.join([c for c in constraints])
             request = ' WHERE '.join([request, constr])
-        # with closing(self.db.cursor()) as cursor:
         cursor = self.db.cursor()
         cursor.execute(request)
         res = cursor.fetchall()
@@ -102,6 +100,14 @@ class DataBase:
         cursor.execute(request)
         self.db.commit()
 
+        request = 'INSERT INTO Projects (id, name) VALUES (-1, "-")'
+        cursor.execute(request)
+        self.db.commit()
+
+        request = 'INSERT INTO Tasks (id, name, project_id) VALUES (-1, "-", -1)'
+        cursor.execute(request)
+        self.db.commit()
+
         request = 'INSERT INTO Users (id, username, first_name, last_name) VALUES (-1, "-", "-", "-")'
         cursor.execute(request)
         self.db.commit()
@@ -136,7 +142,10 @@ class DataBase:
                 separator = ', '
                 if data == '':
                     separator = ''
-                data = separator.join([data, '(%d, "%s", %d)' % (task['id'], task['name'], task['project_id'])])
+                project_id = -1
+                if not (task['project_id'] is None):
+                    project_id = task['project_id']
+                data = separator.join([data, '(%d, "%s", %d)' % (task['id'], task['name'], project_id)])
 
         self.insert('Tasks', ['id', 'name', 'project_id'], data)
 
@@ -185,7 +194,10 @@ class DataBase:
                 assignee_id = -1
                 if not (assignee is None):
                     assignee_id = assignee['id']
-                data = separator.join([data, '(%d, %d, %d, %d, %d)' % (job['id'], assignee_id, stages[job['stage']], states[job['state']], job['task_id'])])
+                task_id = -1
+                if not (job['task_id'] is None):
+                    task_id = job['task_id']
+                data = separator.join([data, '(%d, %d, %d, %d, %d)' % (job['id'], assignee_id, stages[job['stage']], states[job['state']], task_id)])
 
         self.insert('Jobs', ['id', 'assignee', 'stage_id', 'state_id', 'task_id'], data)
 
@@ -306,5 +318,19 @@ class DataBase:
                 report['shapes'] = self.add_if_not_exists(report['shapes'], shape['id'])
         return reports
 
+    def get_users(self):
+        selections = self.select('Users', ['*'])
+        users = {}
+        for s in selections:
+            if s[0] == -1: # id
+                continue
+            # last_name first_name username
+            user = {'name': f'{s[3]} {s[2]}', 'username': s[1]}
+            # id
+            users[s[0]] = user
+        print(users)
+        return users
+
+
 # db = DataBase()
-# db.update_db_reports()
+# db.get_users()
