@@ -4,7 +4,10 @@ import json
 import os
 from extra_streamlit_components import CookieManager
 
+from db import DataBase
+
 cookie_manager = CookieManager()
+db = DataBase()
 
 
 # Функция проверки авторизации
@@ -107,6 +110,12 @@ def check_cookie_auth():
         pass
     return False
 
+def find_key_by_value(data, value, field):
+    for key, item in data.items():
+        if item.get(field) == value:
+            return key
+    return None
+
 def app():
     # Инициализация cookies (выполняется один раз)
     if not hasattr(st, 'cookie_manager_initialized'):
@@ -159,7 +168,7 @@ def app():
     if 'config' not in st.session_state:
         st.session_state.app_config = load_config()
     config_container = st.container()
-    with config_container:
+    with (config_container):
         # Интерфейс
         st.title("⚙️ Панель управления конфигурацией приложения")
 
@@ -172,6 +181,55 @@ def app():
 
         # Создаем форму для всех полей
         with st.form("app_config_form"):
+            st.markdown("#### Настройки отчетов")
+            st.markdown("##### Отправитель")
+            sender_username = st.text_input(
+                "Имя пользователя",
+                value=st.session_state.app_config['email']['sender']['username'],
+                key="sender_username_input"
+            )
+
+            sender_email = st.text_input(
+                "Email пользователя",
+                value=st.session_state.app_config['email']['sender']['email'],
+                key="sender_email_input"
+            )
+
+            sender_password = st.text_input(
+                "Пароль пользователя",
+                value=st.session_state.app_config['email']['sender']['password'],
+                key="sender_password_input"
+            )
+
+            st.markdown("##### Получатель")
+            recipient_email = st.text_input(
+                "Email пользователя",
+                value=st.session_state.app_config['email']['recipient']['email'],
+                key="recipient_email_input"
+            )
+
+            st.markdown("##### Хранение")
+            report_folder_path = st.text_input(
+                "Папка для отчетов",
+                value=st.session_state.app_config['report']['folder_path'],
+                key="report_folder_path_input"
+            )
+
+            st.markdown("##### Пользователи")
+
+            cb_users = {}
+            users = db.get_users()
+            for user_id, user in users.items():
+                value = False
+                if user_id in st.session_state.app_config['report']['users']:
+                    value = True
+                report_user = st.checkbox(
+                    user['name'],
+                    value=value,
+                    key=f"report_users_{user_id}_input"
+                )
+                cb_users[user['name']] = report_user
+
             st.markdown("#### Настройки CVAT")
 
             url_cvat = st.text_input(
@@ -200,33 +258,6 @@ def app():
                 key="password_input"
             )
 
-            st.markdown("#### Настройки отправки отчетов")
-            st.markdown("##### Отправитель")
-            sender_username = st.text_input(
-                "Имя пользователя",
-                value=st.session_state.app_config['email']['sender']['username'],
-                key="sender_username_input"
-            )
-
-            sender_email = st.text_input(
-                "Email пользователя",
-                value=st.session_state.app_config['email']['sender']['email'],
-                key="sender_email_input"
-            )
-
-            sender_password = st.text_input(
-                "Пароль пользователя",
-                value=st.session_state.app_config['email']['sender']['password'],
-                key="sender_password_input"
-            )
-
-            st.markdown("##### Получатель")
-            recipient_email = st.text_input(
-                "Email пользователя",
-                value=st.session_state.app_config['email']['recipient']['email'],
-                key="recipient_email_input"
-            )
-
             # Кнопка применения изменений
             submitted = st.form_submit_button("💾 Применить изменения", type="primary")
 
@@ -243,6 +274,18 @@ def app():
                 st.session_state.app_config['email']['sender']['password'] = sender_password
 
                 st.session_state.app_config['email']['recipient']['email'] = recipient_email
+
+                st.session_state.app_config['report']['folder_path'] = report_folder_path
+
+                report_users = []
+                for name, cb in cb_users.items():
+                    if cb:
+                        user_id = find_key_by_value(users, name, 'name')
+                        if user_id is None:
+                            continue
+                        report_users.append(user_id)
+
+                st.session_state.app_config['report']['users'] = report_users
 
                 apply_changes()
 
