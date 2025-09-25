@@ -18,7 +18,10 @@
             "password": "ePu9ahga"
         },
         "recipient": {
-            "email": "ad6803884@yandex.ru"
+            "emails": [
+                "ad6803884@yandex.ru",
+                "i@ayurkevich.ru"
+            ]
         }
     },
     "report": {

@@ -198,14 +198,17 @@ def app():
             sender_password = st.text_input(
                 "Пароль пользователя",
                 value=st.session_state.app_config['email']['sender']['password'],
+                type='password',
                 key="sender_password_input"
             )
 
-            st.markdown("##### Получатель")
-            recipient_email = st.text_input(
-                "Email пользователя",
-                value=st.session_state.app_config['email']['recipient']['email'],
-                key="recipient_email_input"
+            st.markdown("##### Получатели")
+            recipient_emails = st.multiselect(
+                'Адреса пользователей',
+                options=st.session_state.app_config['email']['recipient']['emails'],
+                default=st.session_state.app_config['email']['recipient']['emails'],
+                key="recipients_email_input",
+                accept_new_options=True
             )
 
             st.markdown("##### Хранение")
@@ -255,6 +258,7 @@ def app():
             password = st.text_input(
                 "Пароль пользователя",
                 value=st.session_state.app_config['cvat']['user']['password'],
+                type='password',
                 key="password_input"
             )
 
@@ -273,7 +277,7 @@ def app():
                 st.session_state.app_config['email']['sender']['email'] = sender_email
                 st.session_state.app_config['email']['sender']['password'] = sender_password
 
-                st.session_state.app_config['email']['recipient']['email'] = recipient_email
+                st.session_state.app_config['email']['recipient']['emails'] = recipient_emails
 
                 st.session_state.app_config['report']['folder_path'] = report_folder_path
 

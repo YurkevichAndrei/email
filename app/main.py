@@ -30,29 +30,32 @@ class Report:
                                                   'report')
         return report_path
 
-    def send_email(self, report_path, recipient_email):
+    def send_email(self, report_path):
         sender_email = self.config['email']['sender']['email']
         sender_password = self.config['email']['sender']['password']
 
-        msg = EmailMessage()
-        msg['Subject'] = 'Ежедневный отчет'
-        msg['From'] = sender_email
-        msg['To'] = recipient_email
-        msg.set_content("Ежедневный отчет")
-
+        messages = []
         with open(report_path, 'rb') as file:
             report_data = file.read()
             report_name = os.path.basename(report_path)
-            msg.add_attachment(report_data, maintype='application', subtype='octet-stream', filename=report_name)
+            for recipient_email in self.config['email']['recipient']['emails']:
+                msg = EmailMessage()
+                msg['Subject'] = 'Ежедневный отчет'
+                msg['From'] = sender_email
+                msg['To'] = recipient_email
+                msg.set_content("Ежедневный отчет")
+                msg.add_attachment(report_data, maintype='application', subtype='octet-stream', filename=report_name)
+                messages.append(msg)
 
         with smtplib.SMTP(self.config['email']['smtp']['host'], self.config['email']['smtp']['port']) as smtp:
             smtp.starttls()
             smtp.login(self.config['email']['sender']['username'], sender_password)
-            smtp.send_message(msg)
+            for msg in messages:
+                smtp.send_message(msg)
 
     def daily_task(self):
         report_path = self.generate_report()
-        self.send_email(report_path, self.config['email']['recipient']['email'])
+        self.send_email(report_path)
 
     def transform_data(self, input_dict):
         """
