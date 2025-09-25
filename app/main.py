@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, date
 import smtplib
 import os
 from email.message import EmailMessage
@@ -22,11 +22,10 @@ class Report:
         return {key: value for key, value in data.items() if key in keys}
 
     def generate_report(self):
-        # TODO нужно переделать таким образом, чтобы была информация за последние сутки
-        reports = self.db.generate_reports()
+        reports = self.db.get_reports(date.today())
         reports = self.filter_report(reports, self.config['report']['users'])
         report_path = self.create_excel_from_dict_list(self.transform_data(reports),
-                                                  f'report_{datetime.now().strftime('%d-%m-%Y')}.xlsx',
+                                                  f'report_{datetime.now().strftime('%d-%m-%Y_%H:%M')}.xlsx',
                                                   'report')
         return report_path
 
@@ -78,9 +77,9 @@ class Report:
                          'username': users[user_id]['username'],
                          'name': users[user_id]['name']}
 
-            for category, items in user_data.items():
+            for category, item in user_data.items():
                 # Добавляем количество элементов для каждой категории
-                user_dict[category] = len(items)
+                user_dict[category] = item
 
             result.append(user_dict)
 

@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import datetime
 
 from network import Networking
 from parameters_selection import ParametersSelection
@@ -10,7 +11,7 @@ class DataBase:
         self.network.init_session()
         self.db = None
 
-        db_file = 'reports_cvat_neuron.db'
+        db_file = 'reports_cvat_neuron_.db'
         if os.path.isfile(db_file):
             self.db = sqlite3.connect(db_file, timeout=30.0)
             self.update_db()
@@ -28,14 +29,27 @@ class DataBase:
             request = 'INSERT INTO %s (%s) VALUES %s' % (table_name, params, values)
             cursor = self.db.cursor()
             cursor.execute(request)
-            self.db.commit()
             cursor.close()
+            self.db.commit()
 
-    def select(self, table_name: str, columns: list[str], constraints: list[str] = ()):
-        request = f'SELECT {', '.join([c for c in columns])} FROM {table_name}'
+    def select(self, table_name: str, columns: list[str] = (), constraints: list[str] = (), sorting: list[str] = (), limit: int = None):
+        request = ''
+        if len(columns) != 0:
+            request = f'SELECT {', '.join([c for c in columns])} FROM {table_name}'
+        else:
+            request = f'SELECT * FROM {table_name}'
+
         if len(constraints) != 0:
             constr = ' AND '.join([c for c in constraints])
             request = ' WHERE '.join([request, constr])
+
+        if len(sorting) != 0:
+            constr = ', '.join([s for s in sorting])
+            request = ' ORDER BY '.join([request, constr])
+
+        if not (limit is None):
+            request = ' LIMIT '.join([request, str(limit)])
+
         cursor = self.db.cursor()
         cursor.execute(request)
         res = cursor.fetchall()
@@ -227,10 +241,13 @@ class DataBase:
         reports = self.generate_reports()
         print(reports)
 
+        values_list = []
         # расчет количества элементов списков и внесение изменений в бд
         for assignee_id, report in reports.items():
             ps = ParametersSelection()
             ps.add_equal('user_id', assignee_id, value_type=type(assignee_id))
+            date = datetime.date.today() - datetime.timedelta(days=1)
+            ps.add_equal('datetime', date, value_type=type(date))
             # id последнего отчета для пользователя assignee_id
             selection = self.select('Reports', ['max(id)'], ps.get_parameters_selection())
             # print(selection)
@@ -239,7 +256,7 @@ class DataBase:
             # если уже есть отчет для пользователя assignee_id
             if not (selection[0][0] is None):
                 last_id_report_user = selection[0][0]
-                # надо взять данные прошлого отчета и вычесть их из актуальных данных, получим данные за прошедший период
+                # надо взять данные прошлого отчета и вычесть их из вчерашних данных, получим данные за прошедший период
                 ps = ParametersSelection()
                 # id последнего отчета для пользователя assignee_id
                 ps.add_equal('id', last_id_report_user, value_type=type(last_id_report_user))
@@ -260,7 +277,9 @@ class DataBase:
                                                                len(report['jobs']), len(report['jobs']),
                                                                len(report['frames']), len(report['frames']),
                                                                len(report['shapes']), len(report['shapes']))
-            self.insert('Reports', ['user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
+            values_list.append(values)
+        values = ', '.join(values_list)
+        self.insert('Reports', ['user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
                                     'frames_count_today', 'frames_count_all_finish', 'shapes_count_today', 'shape_count_all'], values)
 
     @staticmethod
@@ -319,7 +338,7 @@ class DataBase:
         return reports
 
     def get_users(self):
-        selections = self.select('Users', ['*'])
+        selections = self.select('Users')
         users = {}
         for s in selections:
             if s[0] == -1: # id
@@ -328,9 +347,25 @@ class DataBase:
             user = {'name': f'{s[3]} {s[2]}', 'username': s[1]}
             # id
             users[s[0]] = user
-        print(users)
         return users
+
+    def get_reports(self, date: datetime.date):
+        self.update_db_reports()
+        count_users = self.select('Users', ['count(*)'])[0][0]
+        date = date.isoformat()
+        ps = ParametersSelection()
+        ps.add_equal('DATE(datetime)', date, value_type=type(date))
+        reports = {}
+        selections = self.select(table_name='Reports', constraints=ps.get_parameters_selection(), sorting=['datetime DESC'], limit=count_users)
+
+        for s in selections:
+            if s[1] == -1: # user_id
+                continue
+            report = {'jobs': s[3], 'frames': s[5], 'shapes': s[7]}
+            # user_id
+            reports[s[1]] = report
+        return reports
 
 
 # db = DataBase()
-# db.get_users()
+# db.update_db_reports()

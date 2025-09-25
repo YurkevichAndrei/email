@@ -5,7 +5,6 @@ import json
 class Networking:
     def __init__(self):
         self.config = {}
-        # self.cookies = ''
         self.load_config()
         self.session = requests.session()
         self.headers = {}
