@@ -11,7 +11,7 @@ class DataBase:
         self.network.init_session()
         self.db = None
 
-        db_file = 'reports_cvat_neuron_.db'
+        db_file = 'reports_cvat_neuron.db'
         if os.path.isfile(db_file):
             self.db = sqlite3.connect(db_file, timeout=30.0)
             self.update_db()
@@ -247,7 +247,7 @@ class DataBase:
             ps = ParametersSelection()
             ps.add_equal('user_id', assignee_id, value_type=type(assignee_id))
             date = datetime.date.today() - datetime.timedelta(days=1)
-            ps.add_equal('datetime', date, value_type=type(date))
+            ps.add_equal('DATE(datetime)', date, value_type=type(date))
             # id последнего отчета для пользователя assignee_id
             selection = self.select('Reports', ['max(id)'], ps.get_parameters_selection())
             # print(selection)
@@ -257,12 +257,12 @@ class DataBase:
             if not (selection[0][0] is None):
                 last_id_report_user = selection[0][0]
                 # надо взять данные прошлого отчета и вычесть их из вчерашних данных, получим данные за прошедший период
-                ps = ParametersSelection()
+                ps1 = ParametersSelection()
                 # id последнего отчета для пользователя assignee_id
-                ps.add_equal('id', last_id_report_user, value_type=type(last_id_report_user))
+                ps1.add_equal('id', last_id_report_user, value_type=type(last_id_report_user))
                 selection_all_params = self.select('Reports',
                                                    ['jobs_count_all_finish', 'frames_count_all_finish', 'shape_count_all'],
-                                                   ps.get_parameters_selection())
+                                                   ps1.get_parameters_selection())
                 values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id,
                                                                "datetime('now')",
                                                                len(report['jobs']) - selection_all_params[0][0],
