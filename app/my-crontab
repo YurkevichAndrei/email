@@ -1,2 +1,1 @@
-# Формат: минута час день_месяца месяц день_недели команда
-30 23 * * 1-5 python /app/app/main.py >> /var/log/cron.log 2>&1
+30 23 * * 1-5 /usr/bin/python3 /app/app/main.py >> /var/log/cron.log 2>&1
