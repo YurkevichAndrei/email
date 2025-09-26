@@ -1,6 +1,8 @@
 import requests
 import json
 
+import logging
+
 
 class Networking:
     def __init__(self):
@@ -8,6 +10,8 @@ class Networking:
         self.load_config()
         self.session = requests.session()
         self.headers = {}
+        self.log = logging
+        self.log.basicConfig(level=logging.INFO, filename="log.log",filemode="w")
 
     def load_config(self):
         with open('config', 'r') as config_file:
@@ -91,7 +95,7 @@ class Networking:
             response = self.session.get(url, params=[('page_size', 2000)])
         except:
             return None
-        # print(response.json())
+        self.log.info(response.json()['shapes'])
         return response.json()
 
     def get_labels(self, job_id):

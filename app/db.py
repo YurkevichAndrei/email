@@ -21,12 +21,13 @@ class DataBase:
 
     def __del__(self):
         self.network.close_session()
-        self.db.close()
+        # self.db.close()
 
     def insert(self, table_name: str, params: list[str], values: str):
         if values != '':
             params = ', '.join([p for p in params])
             request = 'INSERT INTO %s (%s) VALUES %s' % (table_name, params, values)
+            self.network.log.info(request)
             cursor = self.db.cursor()
             cursor.execute(request)
             cursor.close()
@@ -50,6 +51,7 @@ class DataBase:
         if not (limit is None):
             request = ' LIMIT '.join([request, str(limit)])
 
+        self.network.log.info(request)
         cursor = self.db.cursor()
         cursor.execute(request)
         res = cursor.fetchall()
@@ -335,6 +337,7 @@ class DataBase:
             for shape in annotations['shapes']:
                 report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
                 report['shapes'] = self.add_if_not_exists(report['shapes'], shape['id'])
+            reports[assignee_id] = report
         return reports
 
     def get_users(self):
