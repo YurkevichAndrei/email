@@ -1,0 +1,4 @@
+extra_streamlit_components==0.1.81
+openpyxl==3.1.5
+Requests==2.32.5
+streamlit==1.49.1
