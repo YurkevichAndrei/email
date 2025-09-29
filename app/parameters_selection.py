@@ -15,8 +15,10 @@ class ParametersSelection:
 
         if more_less:
             symbol = '>'
-        else:
+        elif not more_less:
             symbol = '<'
+        else:
+            symbol = '!'
 
         if and_equal:
             symbol = f'{symbol}='
