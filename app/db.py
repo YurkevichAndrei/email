@@ -248,8 +248,9 @@ class DataBase:
         for assignee_id, report in reports.items():
             ps = ParametersSelection()
             ps.add_equal('user_id', assignee_id, value_type=type(assignee_id))
-            date = datetime.date.today() - datetime.timedelta(days=1)
-            ps.add_equal('DATE(datetime)', date, value_type=type(date))
+            date = datetime.date.today() - datetime.timedelta(days=3)
+            ps.add_inequal(field_name='DATE(datetime)', value=date, more_less=True, and_equal=True, value_type=type(date))
+            ps.add_inequal(field_name='DATE(datetime)', value=datetime.date.today(), more_less=None, and_equal=True, value_type=type(date))
             # id последнего отчета для пользователя assignee_id
             selection = self.select('Reports', ['max(id)'], ps.get_parameters_selection())
             # print(selection)
