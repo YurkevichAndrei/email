@@ -10,6 +10,7 @@ from db import DataBase
 class Report:
     def __init__(self):
         self.db = DataBase()
+        self.db.update_db()
         self.config = {}
         self.load_config()
 

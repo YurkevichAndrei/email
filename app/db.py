@@ -14,7 +14,7 @@ class DataBase:
         db_file = 'reports_cvat_neuron.db'
         if os.path.isfile(db_file):
             self.db = sqlite3.connect(db_file, timeout=30.0)
-            self.update_db()
+            # self.update_db()
         else:
             self.db = sqlite3.connect(db_file, timeout=30.0)
             self.init_db()
@@ -250,7 +250,7 @@ class DataBase:
             ps.add_equal('user_id', assignee_id, value_type=type(assignee_id))
             date = datetime.date.today() - datetime.timedelta(days=3)
             ps.add_inequal(field_name='DATE(datetime)', value=date, more_less=True, and_equal=True, value_type=type(date))
-            ps.add_inequal(field_name='DATE(datetime)', value=datetime.date.today(), more_less=None, and_equal=True, value_type=type(date))
+            ps.add_inequal(field_name='DATE(datetime)', value=datetime.date.today(), more_less=False, and_equal=False, value_type=type(date))
             # id последнего отчета для пользователя assignee_id
             selection = self.select('Reports', ['max(id)'], ps.get_parameters_selection())
             # print(selection)
@@ -353,14 +353,14 @@ class DataBase:
             users[s[0]] = user
         return users
 
-    def get_reports(self, date: datetime.date):
+    def get_reports(self, date: datetime.date = datetime.date.today()):
         self.update_db_reports()
         count_users = self.select('Users', ['count(*)'])[0][0]
         date = date.isoformat()
         ps = ParametersSelection()
-        ps.add_equal('DATE(datetime)', date, value_type=type(date))
+        ps.add_equal("DATE(datetime)", date, value_type=type(date))
         reports = {}
-        selections = self.select(table_name='Reports', constraints=ps.get_parameters_selection(), sorting=['datetime DESC'], limit=count_users)
+        selections = self.select(table_name='Reports', constraints=ps.get_parameters_selection(), sorting=['id DESC'], limit=count_users)
 
         for s in selections:
             if s[1] == -1: # user_id
@@ -372,4 +372,4 @@ class DataBase:
 
 
 # db = DataBase()
-# db.update_db_reports()
+# db.get_reports()

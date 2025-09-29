@@ -19,10 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 
 # Настройка cron
-COPY app/my-crontab /etc/cron.d/my-crontab
-RUN chmod 0644 /etc/cron.d/my-crontab && \
-    crontab /etc/cron.d/my-crontab && \
-    touch /var/log/cron.log
+# COPY app/my-crontab /etc/cron.d/my-crontab
+# RUN chmod 0644 /etc/cron.d/my-crontab && \
+#     crontab /etc/cron.d/my-crontab && \
+#     touch /var/log/cron.log
+RUN sh -c 'echo "30 23   * * 1-5 root    cd /app/app && /usr/local/bin/python3 /app/app/main.py" >> /etc/crontab'
 
 # Настройки Streamlit
 ENV STREAMLIT_SERVER_HEADLESS=true \

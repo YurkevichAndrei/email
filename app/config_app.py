@@ -5,6 +5,7 @@ import os
 from extra_streamlit_components import CookieManager
 
 from db import DataBase
+# from main import Report
 
 cookie_manager = CookieManager()
 db = DataBase()
@@ -79,6 +80,7 @@ def login(login: str, password, remember_me=False):
             except:
                 st.warning("Не удалось сохранить сессию в cookies")
 
+        db.update_db()
         st.rerun()
     else:
         st.error("❌ Неверный логин или пароль")
@@ -116,6 +118,14 @@ def find_key_by_value(data, value, field):
             return key
     return None
 
+# def generate_report():
+#     st.session_state.generate_report = False
+#     rep = Report()
+#     rep.daily_task()
+#
+# def click_generate_report():
+#     st.session_state.generate_report = True
+
 def app():
     # Инициализация cookies (выполняется один раз)
     if not hasattr(st, 'cookie_manager_initialized'):
@@ -139,6 +149,9 @@ def app():
     if 'app_config' not in st.session_state:
         st.session_state.app_config = load_config()
 
+    # if 'generate_report' not in st.session_state:
+    #     st.session_state.generate_report = False
+
     # Если не авторизован - показываем форму входа
     if not st.session_state.authenticated:
         st.title("🔐 Авторизация")
@@ -160,6 +173,11 @@ def app():
     # Информация о сессии в сайдбаре
     with st.sidebar:
         st.write(f"**Вы вошли как:** admin")
+
+        # st.button("Сгенерировать отчёт", on_click=click_generate_report, type="primary")
+        #
+        # if st.session_state.generate_report:
+        #     generate_report()
 
         if st.button("🚪 Выйти"):
             logout()
