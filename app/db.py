@@ -365,7 +365,7 @@ class DataBase:
         for s in selections:
             if s[1] == -1: # user_id
                 continue
-            report = {'jobs': s[3], 'frames': s[5], 'shapes': s[7]}
+            report = {'Задачи': s[3], 'Изображения': s[5], 'Объекты': s[7]}
             # user_id
             reports[s[1]] = report
         return reports

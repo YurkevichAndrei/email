@@ -74,9 +74,9 @@ class Report:
         for user_id, user_data in input_dict.items():
             if user_id == -1:
                 continue
-            user_dict = {'user_id': user_id,
-                         'username': users[user_id]['username'],
-                         'name': users[user_id]['name']}
+            user_dict = {'Номер': user_id,
+                         'Имя пользователя': users[user_id]['username'],
+                         'Имя Фамилия': users[user_id]['name']}
 
             for category, item in user_data.items():
                 # Добавляем количество элементов для каждой категории
