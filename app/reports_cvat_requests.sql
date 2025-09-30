@@ -55,3 +55,39 @@ VALUES (-1, "-", "-", "-", "-")
 ALTER TABLE Jobs ADD CONSTRAINT fk_task_id_id FOREIGN KEY (task_id) REFERENCES Tasks(id)
 
 DROP TABLE "Jobs"
+
+SELECT max(id) FROM Reports WHERE user_id = 28 AND DATE(datetime) >= '2025-09-26' AND DATE(datetime) != '2025-09-29'
+
+select date(datetime) from "Reports" where user_id = -1
+
+SELECT datetime('now', 'localtime');
+
+SELECT date(datetime(datetime, 'localtime')) FROM Reports WHERE user_id = 28
+
+SELECT * FROM Reports WHERE DATE(datetime) = "2025-09-29" ORDER BY id DESC LIMIT 33
+
+SELECT * FROM Tasks WHERE name LIKE '%_H20N_%'
+
+CREATE TABLE Labels (id int primary key,
+        name varchar(200),
+        project_id int,
+        FOREIGN KEY (project_id) REFERENCES Projects(id))
+
+INSERT INTO Labels (id, name, project_id) VALUES (-1, "-", -1)
+
+CREATE TABLE Presets (id int primary key,
+        name varchar(500))
+
+CREATE TABLE LabelsPresets (id INTEGER primary key AUTOINCREMENT,
+        preset_id int,
+        label_id int,
+        FOREIGN KEY (preset_id) REFERENCES Presets(id),
+        FOREIGN KEY (label_id) REFERENCES Labels(id))
+
+CREATE TABLE LabelReports (id INTEGER primary key AUTOINCREMENT,
+        report_id INTEGER,
+        preset_id int,
+        shapes_count_today int,
+        shape_count_all int,
+        FOREIGN KEY (report_id) REFERENCES Reports(id),
+        FOREIGN KEY (preset_id) REFERENCES Presets(id))
