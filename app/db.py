@@ -95,6 +95,13 @@ class DataBase:
         cursor.execute(request)
         self.db.commit()
 
+        request = '''CREATE TABLE Labels (id int primary key,
+        name varchar(200),
+        project_id int,
+        FOREIGN KEY (project_id) REFERENCES Projects(id))'''
+        cursor.execute(request)
+        self.db.commit()
+
         request = '''CREATE TABLE Reports (id INTEGER primary key AUTOINCREMENT,
         user_id int,
         datetime datetime,
@@ -105,6 +112,16 @@ class DataBase:
         shapes_count_today int,
         shape_count_all int,
         FOREIGN KEY (user_id) REFERENCES Users(id))'''
+        cursor.execute(request)
+        self.db.commit()
+
+        request = '''CREATE TABLE LabelReports (id INTEGER primary key AUTOINCREMENT,
+        report_id INTEGER,
+        label_id int,
+        shapes_count_today int,
+        shape_count_all int,
+        FOREIGN KEY (report_id) REFERENCES Reports(id),
+        FOREIGN KEY (label_id) REFERENCES Labels(id))'''
         cursor.execute(request)
         self.db.commit()
 
@@ -121,6 +138,10 @@ class DataBase:
         self.db.commit()
 
         request = 'INSERT INTO Tasks (id, name, project_id) VALUES (-1, "-", -1)'
+        cursor.execute(request)
+        self.db.commit()
+
+        request = 'INSERT INTO Labels (id, name, project_id) VALUES (-1, "-", -1)'
         cursor.execute(request)
         self.db.commit()
 
@@ -164,6 +185,26 @@ class DataBase:
                 data = separator.join([data, '(%d, "%s", %d)' % (task['id'], task['name'], project_id)])
 
         self.insert('Tasks', ['id', 'name', 'project_id'], data)
+
+    def update_db_labels(self):
+        if self.db is None:
+            return False
+        labels = self.network.get_labels()['results']
+
+        only_in_id_list = self.difference_list_id('Labels', labels)
+
+        data = ''
+        for label in labels:
+            if label['id'] in only_in_id_list:
+                separator = ', '
+                if data == '':
+                    separator = ''
+                project_id = -1
+                if not (label.get('project_id') is None):
+                    project_id = label['project_id']
+                data = separator.join([data, '(%d, "%s", %d)' % (label['id'], label['name'], project_id)])
+
+        self.insert('Labels', ['id', 'name', 'project_id'], data)
 
     def update_db_users(self):
         if self.db is None:
@@ -221,12 +262,14 @@ class DataBase:
         self.create_db()
         self.update_db_projects()
         self.update_db_tasks()
+        self.update_db_labels()
         self.update_db_users()
         self.update_db_jobs()
 
     def update_db(self):
         self.update_db_projects()
         self.update_db_tasks()
+        self.update_db_labels()
         self.update_db_users()
         self.update_db_jobs()
 
@@ -328,16 +371,39 @@ class DataBase:
             assignee_id = -1
             if not (assignee is None):
                 assignee_id = assignee['id']
+
+            annotations = self.network.get_job_annotations(job['id'])
+
+            # {
+            #     frame_id: [
+            #         label_id,
+            #         label_id
+            #     ],
+            #     frame_id: [
+            #         label_id,
+            #         label_id
+            #     ]
+            # }
+
+            # перед тем как формировать словарь по объектам, нужно сформировать словарь с тегами по фреймам
+            labels = {}
+            for label in annotations['tags']:
+                if labels.get(label['frame']) is None:
+                    labels[label['frame']] = [label['label_id']]
+                else:
+                    labels[label['frame']].append(label['label_id'])
+
             if reports.get(assignee_id) is None:
                 reports[assignee_id] = {'jobs': [], 'frames': [], 'shapes': []}
 
             report = reports.get(assignee_id)
             report['jobs'] = self.add_if_not_exists(report['jobs'], job['id'])
 
-            annotations = self.network.get_job_annotations(job['id'])
             for shape in annotations['shapes']:
                 report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
-                report['shapes'] = self.add_if_not_exists(report['shapes'], shape['id'])
+                shape_and_labels = {'shape': shape['id'], 'labels': labels[shape['frame']].copy()}
+                shape_and_labels['labels'].append(shape['label_id'])
+                report['shapes'] = self.add_if_not_exists(report['shapes'], shape_and_labels)
             reports[assignee_id] = report
         return reports
 
@@ -372,4 +438,4 @@ class DataBase:
 
 
 # db = DataBase()
-# db.get_reports()
+# db.update_db()
