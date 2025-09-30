@@ -98,10 +98,13 @@ class Networking:
         self.log.info(response.json()['shapes'])
         return response.json()
 
-    def get_labels(self, job_id):
+    def get_labels(self, job_id: int = None):
         url = '%s/api/labels'%(self.config["cvat"]["url"])
+        params = [('page_size', 500)]
+        if not (job_id is None):
+            params.append(('job_id', job_id))
         try:
-            response = self.session.get(url, params=[('job_id', job_id), ('page_size', 200)])
+            response = self.session.get(url, params=params)
         except:
             return None
         print(response.json())
@@ -109,5 +112,5 @@ class Networking:
 
 # net = Networking()
 # net.init_session()
-# net.get_users()
+# net.get_labels()
 # net.close_session()
