@@ -317,6 +317,11 @@ class DataBase:
                                                                len(report['frames']),
                                                                len(report['shapes']) - selection_all_params[0][2],
                                                                len(report['shapes']))
+
+            #     TODO тут нужно придумать как сделать запись в LabelReports
+            # для каждого пресета сформировать отчет (если пресеты есть)
+            # скорее всего это лучше вынести в отдельный метод
+
             # если отчетов нет
             else:
                 values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id, "datetime('now')",
@@ -355,12 +360,12 @@ class DataBase:
         #     1: {
         #         'jobs': [1, 2, 3 ...],
         #         'frames': [1, 2, 3 ...],
-        #         'shapes': [1, 2, 3 ...]
+        #         'shapes': [shape_and_labels, shape_and_labels, shape_and_labels ...]
         #     },
         #     2: {
         #         'jobs': [1, 2, 3 ...],
         #         'frames': [1, 2, 3 ...],
-        #         'shapes': [1, 2, 3 ...]
+        #         'shapes': [shape_and_labels, shape_and_labels, shape_and_labels ...]
         #     },
         # }
         # сбор информации о количестве задач, изображений и объектов
@@ -374,6 +379,7 @@ class DataBase:
 
             annotations = self.network.get_job_annotations(job['id'])
 
+            # shape_and_labels
             # {
             #     frame_id: [
             #         label_id,
