@@ -407,8 +407,13 @@ class DataBase:
 
             for shape in annotations['shapes']:
                 report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
-                shape_and_labels = {'shape': shape['id'], 'labels': labels[shape['frame']].copy()}
-                shape_and_labels['labels'].append(shape['label_id'])
+                labs = labels.get(shape['frame'])
+                shape_and_labels = {}
+                if labs is None:
+                    shape_and_labels = {'shape': shape['id'], 'labels': [shape['label_id']]}
+                else:
+                    shape_and_labels = {'shape': shape['id'], 'labels': labs}
+                    shape_and_labels['labels'].append(shape['label_id'])
                 report['shapes'] = self.add_if_not_exists(report['shapes'], shape_and_labels)
             reports[assignee_id] = report
         return reports
