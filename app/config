@@ -38,6 +38,17 @@
             23,
             21,
             19
-        ]
+        ],
+        "tags": [
+            "Camera P1_RGB",
+            "Camera H20N_RGB",
+            "Camera H20N_Thermal",
+            "Camera L2",
+            "Camera AA10_RGB"
+        ],
+        "server": {
+            "host": "http://127.0.0.1",
+            "port": 5152
+        }
     }
 }
