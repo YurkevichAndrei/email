@@ -12,7 +12,6 @@ class ConfigurationApp:
         self.config = self.load_config()
         self.server_path = f"{self.config['report']['server']['host']}:{self.config['report']['server']['port']}"
 
-
     # Функция проверки авторизации
     @staticmethod
     def check_auth(login: str, password):
@@ -124,12 +123,20 @@ class ConfigurationApp:
                 return key
         return None
 
+    @staticmethod
+    def custom_spinner(message="Пожалуйста, подождите..."):
+        """Кастомный спиннер"""
+        st.markdown(f"""
+        <div class="loading-container">
+            <div class="custom-spinner"></div>
+            <p>{message}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     def generate_report(self):
         st.session_state.generate_report = False
         url = f"{self.server_path}/report/new"
-        response = requests.get(url)
-        if response:
-            pass
+        requests.get(url)
 
     @staticmethod
     def click_generate_report():
@@ -183,25 +190,57 @@ class ConfigurationApp:
         with st.sidebar:
             st.write(f"**Вы вошли как:** admin")
 
-            st.button("Сгенерировать отчёт", on_click=self.click_generate_report, type="primary")
-
-            if st.session_state.generate_report:
-                self.generate_report()
-
             if st.button("🚪 Выйти"):
                 self.logout()
+
+            st.button("Сгенерировать отчёт", on_click=self.click_generate_report, type="primary")
+            if st.session_state.generate_report:
+                spinner_container = st.empty()
+                # Показываем спиннер в контейнере
+                with spinner_container.container():
+                    self.custom_spinner("Собираем статистику и генерируем отчет...")
+                self.generate_report()
+                # Очищаем контейнер
+                spinner_container.empty()
+                st.success("Готово!")
 
         # Инициализация конфигурации в session_state
         if 'config' not in st.session_state:
             st.session_state.app_config = self.load_config()
         config_container = st.container()
         with (config_container):
+            # Кастомный CSS для красивого спиннера
+            st.markdown("""
+            <style>
+            .custom-spinner {
+                display: inline-block;
+                width: 50px;
+                height: 50px;
+                border: 5px solid #f3f3f3;
+                border-top: 5px solid #1E88E5;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 20px auto;
+            }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            
+            .loading-container {
+                text-align: center;
+                padding: 20px;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
             # Интерфейс
             st.title("⚙️ Панель управления конфигурацией приложения")
 
-
-            st.markdown("### Текущая конфигурация")
-            st.json(st.session_state.app_config, expanded=False)
+            #
+            # st.markdown("### Текущая конфигурация")
+            # st.json(st.session_state.app_config, expanded=False)
 
 
             st.markdown("### Изменение параметров приложения")
