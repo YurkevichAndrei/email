@@ -56,6 +56,7 @@ class Report:
     def daily_task(self):
         report_path = self.generate_report()
         self.send_email(report_path)
+        return True
 
     def transform_data(self, input_dict):
         """
@@ -123,5 +124,5 @@ class Report:
         wb.save(filepath)
         return filepath
 
-rep = Report()
-rep.daily_task()
+# rep = Report()
+# rep.daily_task()

@@ -13,10 +13,10 @@ class DataBase:
 
         db_file = 'reports_cvat_neuron.db'
         if os.path.isfile(db_file):
-            self.db = sqlite3.connect(db_file, timeout=30.0)
+            self.db = sqlite3.connect(db_file, timeout=30.0, check_same_thread=False)
             # self.update_db()
         else:
-            self.db = sqlite3.connect(db_file, timeout=30.0)
+            self.db = sqlite3.connect(db_file, timeout=30.0, check_same_thread=False)
             self.init_db()
 
     def __del__(self):
@@ -272,6 +272,7 @@ class DataBase:
         self.update_db_labels()
         self.update_db_users()
         self.update_db_jobs()
+        return True
 
     def difference_list_id(self, table_name: str, objects):
         id_list = sorted([obj['id'] for obj in objects])
