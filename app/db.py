@@ -448,6 +448,28 @@ class DataBase:
             reports[s[1]] = report
         return reports
 
+    def get_projects(self):
+        selections = self.select('Projects')
+        projects = {}
+        for s in selections:
+            if s[0] == -1: # id
+                continue
+            # id
+            projects[s[0]] = s[1]
+        return projects
+
+    def get_labels(self, project_id):
+        ps = ParametersSelection()
+        ps.add_equal("project_id", project_id, value_type=type(project_id))
+        selections = self.select('Labels', columns=['id', 'name'], constraints=ps.get_parameters_selection())
+        labels = {}
+        for s in selections:
+            if s[0] == -1: # id
+                continue
+            # id
+            labels[s[0]] = s[1]
+        return labels
+
 
 # db = DataBase()
 # db.update_db()

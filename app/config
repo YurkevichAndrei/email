@@ -25,6 +25,7 @@
         }
     },
     "report": {
+        "project": 38,
         "folder_path": "reports",
         "users": [
             36,
@@ -39,16 +40,15 @@
             21,
             19
         ],
-        "tags": [
-            "Camera P1_RGB",
-            "Camera H20N_RGB",
-            "Camera H20N_Thermal",
-            "Camera L2",
-            "Camera AA10_RGB"
+        "presets_tags": [
+            0,
+            1,
+            2,
+            3
         ],
         "server": {
             "host": "http://127.0.0.1",
-            "port": 5152
+            "port": 5153
         }
     }
 }
