@@ -143,6 +143,12 @@ class ConfigurationApp:
         st.session_state.generate_report = True
 
     def app(self):
+        st.set_page_config(
+            page_title="Отчеты CVAT",  # Заголовок для вкладки браузера
+            page_icon="⚙️",              # Иконка для вкладки
+            layout="wide"                # Растягивание на весь экран
+        )
+
         # Инициализация cookies (выполняется один раз)
         if not hasattr(st, 'cookie_manager_initialized'):
             try:
@@ -170,6 +176,16 @@ class ConfigurationApp:
 
         # Если не авторизован - показываем форму входа
         if not st.session_state.authenticated:
+            st.markdown("""
+            <style>
+            .stMainBlockContainer {
+                max-width: 50%;
+                padding-left: 5rem;
+                padding-right: 5rem;
+            }
+            </style>
+            """, unsafe_allow_html=True
+                        )
             st.title("🔐 Авторизация")
 
             with st.form("auth_form"):
@@ -207,6 +223,22 @@ class ConfigurationApp:
         # Инициализация конфигурации в session_state
         if 'config' not in st.session_state:
             st.session_state.app_config = self.load_config()
+
+        # Настройка страницы ДО любых других команд Streamlit
+        st.set_page_config(layout="wide")
+
+        # Применение кастомных стилей для растягивания на весь экран
+        st.markdown("""
+            <style>
+            .stMainBlockContainer {
+                max-width: 90%;
+                padding-left: 5rem;
+                padding-right: 5rem;
+            }
+            </style>
+            """, unsafe_allow_html=True
+                    )
+
         config_container = st.container()
         with (config_container):
             # Кастомный CSS для красивого спиннера
@@ -232,7 +264,25 @@ class ConfigurationApp:
                 text-align: center;
                 padding: 20px;
             }
-            </style>
+            
+            .fixed-header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                background-color: #0E1117;
+                color: white;
+                padding: 15px 0;
+                text-align: center;
+                z-index: 9999;
+                font-size: 1.5rem;
+                font-weight: bold;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            }
+            /* Добавляем отступ для основного контента */
+            .main-content {
+                margin-top: 80px;
+            }
             """, unsafe_allow_html=True)
 
             # Интерфейс
@@ -242,94 +292,114 @@ class ConfigurationApp:
             # st.markdown("### Текущая конфигурация")
             # st.json(st.session_state.app_config, expanded=False)
 
-
+            # CSS для увеличения шрифта во вкладках
+            st.markdown("""
+                <style>
+                    /* Подпункты */
+                    button[data-baseweb="tab"] > div[data-testid="stMarkdownContainer"] {
+                        font-size: 1.0rem;
+                    }
+                    /* Пункты */
+                    button[data-baseweb="tab"] > div[data-testid="stMarkdownContainer"] > p {
+                        font-size: 1.2rem;
+                    }
+                </style>
+                """, unsafe_allow_html=True)
             st.markdown("### Изменение параметров приложения")
 
             # Создаем форму для всех полей
             with st.form("app_config_form"):
-                st.markdown("#### Настройки отчетов")
-                st.markdown("##### Отправитель")
-                sender_username = st.text_input(
-                    "Имя пользователя",
-                    value=st.session_state.app_config['email']['sender']['username'],
-                    key="sender_username_input"
-                )
 
-                sender_email = st.text_input(
-                    "Email пользователя",
-                    value=st.session_state.app_config['email']['sender']['email'],
-                    key="sender_email_input"
-                )
+                tab1, tab2= st.tabs(["Настройки отчетов", "Настройки CVAT"])
 
-                sender_password = st.text_input(
-                    "Пароль пользователя",
-                    value=st.session_state.app_config['email']['sender']['password'],
-                    type='password',
-                    key="sender_password_input"
-                )
+                with tab1:
+                    tab11, tab12, tab13, tab14= st.tabs(["Отправитель", "Получатели", "Хранение", "Пользователи"])
+                    with tab11:
+                        sender_username = st.text_input(
+                            "Имя пользователя",
+                            value=st.session_state.app_config['email']['sender']['username'],
+                            key="sender_username_input"
+                        )
 
-                st.markdown("##### Получатели")
-                recipient_emails = st.multiselect(
-                    'Адреса пользователей',
-                    options=st.session_state.app_config['email']['recipient']['emails'],
-                    default=st.session_state.app_config['email']['recipient']['emails'],
-                    key="recipients_email_input",
-                    accept_new_options=True
-                )
+                        sender_email = st.text_input(
+                            "Email пользователя",
+                            value=st.session_state.app_config['email']['sender']['email'],
+                            key="sender_email_input"
+                        )
 
-                st.markdown("##### Хранение")
-                report_folder_path = st.text_input(
-                    "Папка для отчетов",
-                    value=st.session_state.app_config['report']['folder_path'],
-                    key="report_folder_path_input"
-                )
+                        sender_password = st.text_input(
+                            "Пароль пользователя",
+                            value=st.session_state.app_config['email']['sender']['password'],
+                            type='password',
+                            key="sender_password_input"
+                        )
 
-                st.markdown("##### Пользователи")
+                    with tab12:
+                        recipient_emails = st.multiselect(
+                            'Адреса пользователей',
+                            options=st.session_state.app_config['email']['recipient']['emails'],
+                            default=st.session_state.app_config['email']['recipient']['emails'],
+                            key="recipients_email_input",
+                            accept_new_options=True
+                        )
 
-                cb_users = {}
-                url = f"{self.server_path}/db/users"
-                response = requests.get(url)
-                users = response.json()
-                for user_id, user in users.items():
-                    user_id = int(user_id)
-                    value = False
-                    if user_id in st.session_state.app_config['report']['users']:
-                        value = True
-                    report_user = st.checkbox(
-                        user['name'],
-                        value=value,
-                        key=f"report_users_{user_id}_input"
+                    with tab13:
+                        report_folder_path = st.text_input(
+                            "Папка для отчетов",
+                            value=st.session_state.app_config['report']['folder_path'],
+                            key="report_folder_path_input"
+                        )
+
+                    with tab14:
+                        cb_users = {}
+                        url = f"{self.server_path}/db/users"
+                        response = requests.get(url)
+                        users = response.json()
+                        col1, col2 = st.columns(2)
+                        users_list = list(users.items())
+                        for index, (user_id, user) in enumerate(users_list):
+                            user_id = int(user_id)
+                            value = False
+                            if user_id in st.session_state.app_config['report']['users']:
+                                value = True
+                            # Выбираем колонку в зависимости от четности индекса
+                            current_col = col1 if index % 2 == 0 else col2
+                            # Размещаем чекбокс в выбранной колонке
+                            with current_col:
+                                report_user = st.checkbox(
+                                    user['name'],
+                                    value=value,
+                                    key=f"report_users_{user_id}_input"
+                                )
+                                cb_users[user['name']] = report_user
+
+                with tab2:
+                    url_cvat = st.text_input(
+                        "Хост CVAT",
+                        value=st.session_state.app_config['cvat']['url'],
+                        key="url_cvat_input"
                     )
-                    cb_users[user['name']] = report_user
 
-                st.markdown("#### Настройки CVAT")
+                    st.markdown("###### Настройки доступа")
 
-                url_cvat = st.text_input(
-                    "Хост CVAT",
-                    value=st.session_state.app_config['cvat']['url'],
-                    key="url_cvat_input"
-                )
+                    username = st.text_input(
+                        "Имя пользователя",
+                        value=st.session_state.app_config['cvat']['user']['username'],
+                        key="username_input"
+                    )
 
-                st.markdown("##### Настройки доступа")
+                    email = st.text_input(
+                        "Email пользователя",
+                        value=st.session_state.app_config['cvat']['user']['email'],
+                        key="email_input"
+                    )
 
-                username = st.text_input(
-                    "Имя пользователя",
-                    value=st.session_state.app_config['cvat']['user']['username'],
-                    key="username_input"
-                )
-
-                email = st.text_input(
-                    "Email пользователя",
-                    value=st.session_state.app_config['cvat']['user']['email'],
-                    key="email_input"
-                )
-
-                password = st.text_input(
-                    "Пароль пользователя",
-                    value=st.session_state.app_config['cvat']['user']['password'],
-                    type='password',
-                    key="password_input"
-                )
+                    password = st.text_input(
+                        "Пароль пользователя",
+                        value=st.session_state.app_config['cvat']['user']['password'],
+                        type='password',
+                        key="password_input"
+                    )
 
                 # Кнопка применения изменений
                 submitted = st.form_submit_button("💾 Применить изменения", type="primary")
@@ -356,7 +426,7 @@ class ConfigurationApp:
                             user_id = self.find_key_by_value(users, name, 'name')
                             if user_id is None:
                                 continue
-                            report_users.append(user_id)
+                            report_users.append(int(user_id))
 
                     st.session_state.app_config['report']['users'] = report_users
 

@@ -28,3 +28,7 @@
 .stAlert {
     border-radius: 8px;
 }
+
+button[data-baseweb="tab"] > div[data-testid="stMarkdownContainer"] > p {
+    font-size: 1.4rem; /* Можно изменить на нужный размер */
+}
