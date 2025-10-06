@@ -470,6 +470,24 @@ class DataBase:
             labels[s[0]] = s[1]
         return labels
 
+    def get_presets(self):
+        # SELECT p.id, p.name, l.name
+        # FROM Presets as p, LabelsPresets as lp, Labels as l
+        # WHERE lp.id == p.id AND lp.label_id == l.id
+        ps = ParametersSelection()
+        ps.add_equal('lp.id', 'p.id', value_type=int)
+        ps.add_equal('lp.label_id', 'l.id', value_type=int)
+        selections = self.select('Presets as p, LabelsPresets as lp, Labels as l',
+                                 columns=['p.id', 'p.name', 'l.name'],
+                                 constraints=ps.get_parameters_selection())
+        presets = {}
+        for s in selections:
+            if presets.get(s[0]) is None:
+                presets[s[0]] = {'name': s[1], 'labels': [s[2]]}
+            else:
+                presets[s[0]]['labels'].append(s[2])
+        return presets
+
 
 # db = DataBase()
 # db.update_db()

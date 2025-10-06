@@ -149,7 +149,7 @@ class ConfigurationApp:
         st.session_state.change_project = True
 
     @staticmethod
-    def change_project(new_name, names_list, proj_ids):
+    def change_project_f(new_name, names_list, proj_ids):
         st.session_state.project = proj_ids[names_list.index(new_name)]
 
     def app(self):
@@ -189,6 +189,9 @@ class ConfigurationApp:
 
         if 'project' not in st.session_state:
             st.session_state.project = st.session_state.app_config['report']['project']
+
+        if 'labels' not in st.session_state:
+            st.session_state.labels = {}
 
         # Если не авторизован - показываем форму входа
         if not st.session_state.authenticated:
@@ -389,51 +392,69 @@ class ConfigurationApp:
                                 cb_users[user['name']] = report_user
 
                     with tab15:
-                        # TODO нужно доделать добавление и получение пресетов из БД
+                        # TODO нужно доделать добавление пресетов в БД
                         # Инициализация данных в session_state
                         if 'presets' not in st.session_state:
-                            st.session_state.presets = {
-                                0: {
-                                    "name": "пресет 1",
-                                    "labels": []
-                                },
-                                1: {
-                                    "name": "пресет 2",
-                                    "labels": []
-                                },
-                                2: {
-                                    "name": "пресет 3",
-                                    "labels": []
-                                },
-                                3: {
-                                    "name": "пресет 4",
-                                    "labels": []
-                                },
-                            }
-                        preset_ids = list(st.session_state.presets.keys())
-
-                        # Ручное создание интерфейса для каждой строки
-                        # labels_all = ["Опция 1", "Опция 2", "Опция 3"]
-                        url = f"{self.server_path}/db/users"
-                        response = requests.get(url, params={'project_id': st.session_state.project})
-                        labels = response.json()
-                        labels_all = [label for _, label in labels.items()]
-
-                        for i in preset_ids:
-                            # Проверяем, существует ли еще пресет (мог быть удален в предыдущей итерации)
-                            if i not in st.session_state.presets.keys():
-                                continue
-                            with st.expander(st.session_state.presets[i]['name']):
-                                st.session_state.presets[i]['name'] = st.text_input("Имя", value=st.session_state.presets[i]['name'], key=f"name_{i}")
-                                st.session_state.presets[i]['labels'] = st.multiselect(
-                                    "Выберите опции",
-                                    labels_all,
-                                    default=st.session_state.presets[i]['labels'],
-                                    key=f"select_{i}"
-                                    )
-                                if st.form_submit_button("Удалить пресет", key=f"del_button_{i}"):
+                            url = f"{self.server_path}/db/presets"
+                            response = requests.get(url)
+                            st.session_state.presets = response.json()
+                            if st.session_state.presets.get('detail') == 'Not Found':
+                                st.session_state.presets = {}
+                            else:
+                                for i, preset in st.session_state.presets.items():
                                     st.session_state.presets.pop(i)
-                                    st.rerun()
+                                    st.session_state.presets[int(i)] = preset
+                        # st.session_state.presets = {
+                        #     0: {
+                        #         "name": "пресет 1",
+                        #         "labels": []
+                        #     },
+                        #     1: {
+                        #         "name": "пресет 2",
+                        #         "labels": []
+                        #     },
+                        #     2: {
+                        #         "name": "пресет 3",
+                        #         "labels": []
+                        #     },
+                        #     3: {
+                        #         "name": "пресет 4",
+                        #         "labels": []
+                        #     },
+                        # }
+
+                        if st.form_submit_button("Добавить пресет", key="new_button"):
+                            max_id_preset = 0
+                            if len(list(st.session_state.presets.keys())) != 0:
+                                max_id_preset = max(list(st.session_state.presets.keys()))
+                            new_preset = {'name': f"Новый пресет", "labels": []}
+                            st.session_state.presets[max_id_preset+1] = new_preset
+                            st.rerun()
+
+                        if len(list(st.session_state.presets.keys())) != 0:
+                            preset_ids = list(st.session_state.presets.keys())
+
+                            # Ручное создание интерфейса для каждой строки
+                            # labels_all = ["Опция 1", "Опция 2", "Опция 3"]
+                            url = f"{self.server_path}/db/labels"
+                            response = requests.get(url, params={'project_id': st.session_state.project})
+                            st.session_state.labels = response.json()
+
+                            for i in preset_ids:
+                                # Проверяем, существует ли еще пресет (мог быть удален в предыдущей итерации)
+                                if i not in st.session_state.presets.keys():
+                                    continue
+                                with st.expander(st.session_state.presets[i]['name']):
+                                    st.session_state.presets[i]['name'] = st.text_input("Имя", value=st.session_state.presets[i]['name'], key=f"name_{i}")
+                                    st.session_state.presets[i]['labels'] = st.multiselect(
+                                        "Выберите опции",
+                                        st.session_state.labels.values(),
+                                        default=st.session_state.presets[i]['labels'],
+                                        key=f"select_{i}"
+                                        )
+                                    if st.form_submit_button("Удалить пресет", key=f"del_button_{i}"):
+                                        st.session_state.presets.pop(i)
+                                        st.rerun()
 
                     with tab16:
                         url = f"{self.server_path}/db/projects"
@@ -445,6 +466,7 @@ class ConfigurationApp:
                         options = []
                         index = 0
                         for id_proj, proj_name in projects.items():
+                            id_proj = int(id_proj)
                             options.append(proj_name)
                             projects_nums.append(id_proj)
                             if id_proj == st.session_state.project:
@@ -458,7 +480,7 @@ class ConfigurationApp:
                             on_change=self.on_change_project()
                         )
                         if st.session_state.change_project:
-                            self.change_project(option, proj_name, projects_nums)
+                            self.change_project_f(option, options, projects_nums)
                             st.session_state.change_project = False
 
                 with tab2:

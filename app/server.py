@@ -33,3 +33,9 @@ def db_get_labels(project_id: int):
     labels = db.get_labels(project_id)
     print(labels)
     return labels
+
+@app.get("/db/presets")
+def db_get_presets():
+    presets = db.get_presets()
+    print(presets)
+    return presets
