@@ -27,6 +27,7 @@ class DataBase:
         if values != '':
             params = ', '.join([p for p in params])
             request = 'INSERT INTO %s (%s) VALUES %s' % (table_name, params, values)
+            print(request)
             self.network.log.info(request)
             cursor = self.db.cursor()
             cursor.execute(request)
@@ -57,6 +58,19 @@ class DataBase:
         res = cursor.fetchall()
         cursor.close()
         return res
+
+    def delete(self, table_name: str, constraints: list[str] = ()):
+        request = f'DELETE FROM {table_name}'
+
+        if len(constraints) != 0:
+            constr = ' AND '.join([c for c in constraints])
+            request = ' WHERE '.join([request, constr])
+
+        self.network.log.info(request)
+        cursor = self.db.cursor()
+        cursor.execute(request)
+        cursor.close()
+        self.db.commit()
 
     def create_db(self):
         cursor = self.db.cursor()
@@ -466,8 +480,7 @@ class DataBase:
         for s in selections:
             if s[0] == -1: # id
                 continue
-            # id
-            labels[s[0]] = s[1]
+            labels[s[1]] = s[0]
         return labels
 
     def get_presets(self):
@@ -475,7 +488,7 @@ class DataBase:
         # FROM Presets as p, LabelsPresets as lp, Labels as l
         # WHERE lp.id == p.id AND lp.label_id == l.id
         ps = ParametersSelection()
-        ps.add_equal('lp.id', 'p.id', value_type=int)
+        ps.add_equal('lp.preset_id', 'p.id', value_type=int)
         ps.add_equal('lp.label_id', 'l.id', value_type=int)
         selections = self.select('Presets as p, LabelsPresets as lp, Labels as l',
                                  columns=['p.id', 'p.name', 'l.name'],
@@ -486,7 +499,35 @@ class DataBase:
                 presets[s[0]] = {'name': s[1], 'labels': [s[2]]}
             else:
                 presets[s[0]]['labels'].append(s[2])
+        print(presets)
         return presets
+
+    def set_presets(self, presets: dict):
+        print(presets)
+        #  проверка нет ли пресета с таким id
+        #  если есть, то удалить все labelsPresets, которые с ним связаны, и добавить обновленные
+        #  если нет, то просто добавляем пресет по полной
+        presets_db = [s[0] for s in self.select(table_name='Presets', columns=['id'])]
+        for i, preset in presets.items():
+            # если пресет с таким id уже существует
+            if i in presets_db:
+                ps = ParametersSelection()
+                ps.add_equal("preset_id", i, value_type=type(i))
+                self.delete(table_name='LabelsPresets', constraints=ps.get_parameters_selection())
+                ps1 = ParametersSelection()
+                ps1.add_equal("id", i, value_type=type(i))
+                self.delete(table_name='Presets', constraints=ps1.get_parameters_selection())
+
+            data = f'({i}, "{preset['name']}")'
+            self.insert(table_name="Presets", params=['id', 'name'], values=data)
+
+            data = ''
+            for label in preset['labels']:
+                separator = ', '
+                if data == '':
+                    separator = ''
+                data = separator.join([data, f'({i}, {label})'])
+            self.insert(table_name="LabelsPresets", params=['preset_id', 'label_id'], values=data)
 
 
 # db = DataBase()

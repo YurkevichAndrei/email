@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from typing import Dict, Any
 
 from db import DataBase
 from main import Report
@@ -39,3 +40,8 @@ def db_get_presets():
     presets = db.get_presets()
     print(presets)
     return presets
+
+@app.post("/db/presets")
+def db_set_presets(presets: Dict[int, Any]):
+    print(presets)
+    return db.set_presets(presets)

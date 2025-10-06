@@ -1,6 +1,4 @@
 import hashlib
-from tkinter.font import names
-
 import streamlit as st
 import json
 import os
@@ -392,18 +390,16 @@ class ConfigurationApp:
                                 cb_users[user['name']] = report_user
 
                     with tab15:
-                        # TODO нужно доделать добавление пресетов в БД
                         # Инициализация данных в session_state
                         if 'presets' not in st.session_state:
-                            url = f"{self.server_path}/db/presets"
-                            response = requests.get(url)
-                            st.session_state.presets = response.json()
-                            if st.session_state.presets.get('detail') == 'Not Found':
-                                st.session_state.presets = {}
-                            else:
-                                for i, preset in st.session_state.presets.items():
-                                    st.session_state.presets.pop(i)
-                                    st.session_state.presets[int(i)] = preset
+                            st.session_state.presets = {}
+                        url = f"{self.server_path}/db/presets"
+                        response = requests.get(url)
+                        st.session_state.presets = response.json()
+                        if st.session_state.presets.get('detail') == 'Not Found':
+                            st.session_state.presets = {}
+                        else:
+                            st.session_state.presets = {int(i): preset for i, preset in st.session_state.presets.items()}
                         # st.session_state.presets = {
                         #     0: {
                         #         "name": "пресет 1",
@@ -422,20 +418,17 @@ class ConfigurationApp:
                         #         "labels": []
                         #     },
                         # }
-
                         if st.form_submit_button("Добавить пресет", key="new_button"):
                             max_id_preset = 0
                             if len(list(st.session_state.presets.keys())) != 0:
                                 max_id_preset = max(list(st.session_state.presets.keys()))
-                            new_preset = {'name': f"Новый пресет", "labels": []}
+                            new_preset = {'name': "Новый пресет", "labels": []}
                             st.session_state.presets[max_id_preset+1] = new_preset
                             st.rerun()
 
                         if len(list(st.session_state.presets.keys())) != 0:
                             preset_ids = list(st.session_state.presets.keys())
 
-                            # Ручное создание интерфейса для каждой строки
-                            # labels_all = ["Опция 1", "Опция 2", "Опция 3"]
                             url = f"{self.server_path}/db/labels"
                             response = requests.get(url, params={'project_id': st.session_state.project})
                             st.session_state.labels = response.json()
@@ -448,7 +441,7 @@ class ConfigurationApp:
                                     st.session_state.presets[i]['name'] = st.text_input("Имя", value=st.session_state.presets[i]['name'], key=f"name_{i}")
                                     st.session_state.presets[i]['labels'] = st.multiselect(
                                         "Выберите опции",
-                                        st.session_state.labels.values(),
+                                        st.session_state.labels.keys(),
                                         default=st.session_state.presets[i]['labels'],
                                         key=f"select_{i}"
                                         )
@@ -539,6 +532,23 @@ class ConfigurationApp:
                             report_users.append(int(user_id))
 
                     st.session_state.app_config['report']['users'] = report_users
+
+                    st.session_state.app_config['report']['presets'] = list(st.session_state.presets.keys())
+
+                    presets = {}
+                    if len(list(st.session_state.presets.keys())) != 0:
+                        preset_ids = list(st.session_state.presets.keys())
+
+                        for i in preset_ids:
+                            # Проверяем, существует ли еще пресет (мог быть удален в предыдущей итерации)
+                            if i not in st.session_state.presets.keys():
+                                continue
+                            presets[i] = {'name': st.session_state.presets[i]['name'], 'labels': []}
+                            for label in st.session_state.presets[i]['labels']:
+                                presets[i]['labels'].append(st.session_state.labels[label])
+
+                    url = f"{self.server_path}/db/presets"
+                    requests.post(url, json=presets)
 
                     self.apply_changes()
 
