@@ -20,7 +20,6 @@ class ConfigurationApp:
 
         return login == "admin" and password_hash == stored_hash
 
-
     # Загрузка конфигурации приложения
     @staticmethod
     def load_config():

@@ -301,6 +301,8 @@ class DataBase:
         reports = self.generate_reports()
         print(reports)
 
+        last_id = self.select('Reports', ['max(id)'])[0][0] + 1
+
         values_list = []
         # расчет количества элементов списков и внесение изменений в бд
         for assignee_id, report in reports.items():
@@ -324,28 +326,34 @@ class DataBase:
                 selection_all_params = self.select('Reports',
                                                    ['jobs_count_all_finish', 'frames_count_all_finish', 'shape_count_all'],
                                                    ps1.get_parameters_selection())
-                values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id,
-                                                               "datetime('now')",
-                                                               len(report['jobs']) - selection_all_params[0][0],
-                                                               len(report['jobs']),
-                                                               len(report['frames']) - selection_all_params[0][1],
-                                                               len(report['frames']),
-                                                               len(report['shapes']) - selection_all_params[0][2],
-                                                               len(report['shapes']))
+                values = '(%d, %d, %s, %d, %d, %d, %d, %d, %d)' % (last_id,
+                                                                   assignee_id,
+                                                                   "datetime('now')",
+                                                                   len(report['jobs']) - selection_all_params[0][0],
+                                                                   len(report['jobs']),
+                                                                   len(report['frames']) - selection_all_params[0][1],
+                                                                   len(report['frames']),
+                                                                   len(report['shapes']) - selection_all_params[0][2],
+                                                                   len(report['shapes']))
 
-            #     TODO тут нужно придумать как сделать запись в LabelReports
+            # TODO тут нужно придумать как сделать запись в LabelReports
             # для каждого пресета сформировать отчет (если пресеты есть)
             # скорее всего это лучше вынести в отдельный метод
 
             # если отчетов нет
             else:
-                values = '(%d, %s, %d, %d, %d, %d, %d, %d)' % (assignee_id, "datetime('now')",
-                                                               len(report['jobs']), len(report['jobs']),
-                                                               len(report['frames']), len(report['frames']),
-                                                               len(report['shapes']), len(report['shapes']))
+                values = '(%d, %d, %s, %d, %d, %d, %d, %d, %d)' % (last_id, assignee_id, "datetime('now')",
+                                                                   len(report['jobs']), len(report['jobs']),
+                                                                   len(report['frames']), len(report['frames']),
+                                                                   len(report['shapes']), len(report['shapes']))
             values_list.append(values)
+            last_id += 1
+
+        #     для указанного шейпа нужно проверить есть ли все указанные в пресете тэги
+        #     смотрим отчет для данного пользователя и проходимся по всем пресетам
+
         values = ', '.join(values_list)
-        self.insert('Reports', ['user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
+        self.insert('Reports', ['id', 'user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
                                     'frames_count_today', 'frames_count_all_finish', 'shapes_count_today', 'shape_count_all'], values)
 
     @staticmethod
