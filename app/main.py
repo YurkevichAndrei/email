@@ -15,7 +15,7 @@ class Report:
         self.load_config()
 
     def load_config(self):
-        with open('config', 'r') as config_file:
+        with open('../config.json', 'r') as config_file:
             self.config = json.load(config_file)
 
     @staticmethod

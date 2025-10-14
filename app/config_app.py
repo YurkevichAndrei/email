@@ -24,8 +24,8 @@ class ConfigurationApp:
     @staticmethod
     def load_config():
         try:
-            if os.path.exists('config'):
-                with open('config', 'r', encoding='utf-8') as f:
+            if os.path.exists('../config.json'):
+                with open('../config.json', 'r', encoding='utf-8') as f:
                     return json.load(f)
         except:
             pass
@@ -93,7 +93,7 @@ class ConfigurationApp:
     # Сохранение конфигурации
     @staticmethod
     def save_config(config):
-        with open('config', 'w', encoding='utf-8') as f:
+        with open('../config.json', 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=4)
 
     # Функция применения изменений
@@ -236,7 +236,7 @@ class ConfigurationApp:
                 st.success("Готово!")
 
         # Инициализация конфигурации в session_state
-        if 'config' not in st.session_state:
+        if 'config.json' not in st.session_state:
             st.session_state.app_config = self.load_config()
 
         # Настройка страницы ДО любых других команд Streamlit
@@ -402,26 +402,27 @@ class ConfigurationApp:
                         # st.session_state.presets = {
                         #     0: {
                         #         "name": "пресет 1",
-                        #         "labels": []
+                        #         "labels_name": []
                         #     },
                         #     1: {
                         #         "name": "пресет 2",
-                        #         "labels": []
+                        #         "labels_name": []
                         #     },
                         #     2: {
                         #         "name": "пресет 3",
-                        #         "labels": []
+                        #         "labels_name": []
                         #     },
                         #     3: {
                         #         "name": "пресет 4",
-                        #         "labels": []
+                        #         "labels_name": []
                         #     },
                         # }
                         if st.form_submit_button("Добавить пресет", key="new_button"):
+                            # TODO нужно создавать новый id пресета, а не начинать с 1
                             max_id_preset = 0
                             if len(list(st.session_state.presets.keys())) != 0:
                                 max_id_preset = max(list(st.session_state.presets.keys()))
-                            new_preset = {'name': "Новый пресет", "labels": []}
+                            new_preset = {'name': "Новый пресет", "labels_name": []}
                             st.session_state.presets[max_id_preset+1] = new_preset
                             st.rerun()
 
@@ -438,10 +439,10 @@ class ConfigurationApp:
                                     continue
                                 with st.expander(st.session_state.presets[i]['name']):
                                     st.session_state.presets[i]['name'] = st.text_input("Имя", value=st.session_state.presets[i]['name'], key=f"name_{i}")
-                                    st.session_state.presets[i]['labels'] = st.multiselect(
+                                    st.session_state.presets[i]['labels_name'] = st.multiselect(
                                         "Выберите опции",
                                         st.session_state.labels.keys(),
-                                        default=st.session_state.presets[i]['labels'],
+                                        default=st.session_state.presets[i]['labels_name'],
                                         key=f"select_{i}"
                                         )
                                     if st.form_submit_button("Удалить пресет", key=f"del_button_{i}"):
@@ -542,9 +543,9 @@ class ConfigurationApp:
                             # Проверяем, существует ли еще пресет (мог быть удален в предыдущей итерации)
                             if i not in st.session_state.presets.keys():
                                 continue
-                            presets[i] = {'name': st.session_state.presets[i]['name'], 'labels': []}
-                            for label in st.session_state.presets[i]['labels']:
-                                presets[i]['labels'].append(st.session_state.labels[label])
+                            presets[i] = {'name': st.session_state.presets[i]['name'], 'labels_id': []}
+                            for label in st.session_state.presets[i]['labels_name']:
+                                presets[i]['labels_id'].append(st.session_state.labels[label])
 
                     url = f"{self.server_path}/db/presets"
                     requests.post(url, json=presets)

@@ -301,9 +301,13 @@ class DataBase:
         reports = self.generate_reports()
         print(reports)
 
+        # сначала получаем все пресеты
+        presets = self.get_presets()
+
         last_id = self.select('Reports', ['max(id)'])[0][0] + 1
 
         values_list = []
+        values_presets_list = []
         # расчет количества элементов списков и внесение изменений в бд
         for assignee_id, report in reports.items():
             ps = ParametersSelection()
@@ -313,9 +317,11 @@ class DataBase:
             ps.add_inequal(field_name='DATE(datetime)', value=datetime.date.today(), more_less=False, and_equal=False, value_type=type(date))
             # id последнего отчета для пользователя assignee_id
             selection = self.select('Reports', ['max(id)'], ps.get_parameters_selection())
+
             # print(selection)
             last_id_report_user = -1
             values = ''
+            values_presets = []
             # если уже есть отчет для пользователя assignee_id
             if not (selection[0][0] is None):
                 last_id_report_user = selection[0][0]
@@ -335,26 +341,71 @@ class DataBase:
                                                                    len(report['frames']),
                                                                    len(report['shapes']) - selection_all_params[0][2],
                                                                    len(report['shapes']))
-
-            # TODO тут нужно придумать как сделать запись в LabelReports
-            # для каждого пресета сформировать отчет (если пресеты есть)
-            # скорее всего это лучше вынести в отдельный метод
+                # # расчитываем данные по пресетам
+                # if len(presets) != 0:
+                #     values_presets = self.generate_values_for_presets(last_id, presets, report['shapes'], old_report_id=last_id_report_user)
 
             # если отчетов нет
             else:
+                # записываем общие данные
                 values = '(%d, %d, %s, %d, %d, %d, %d, %d, %d)' % (last_id, assignee_id, "datetime('now')",
                                                                    len(report['jobs']), len(report['jobs']),
                                                                    len(report['frames']), len(report['frames']),
                                                                    len(report['shapes']), len(report['shapes']))
+                # # расчитываем данные по пресетам
+                # if len(presets) != 0:
+                #     values_presets = self.generate_values_for_presets(last_id, presets, report['shapes'], new=True)
+
+            # values_presets_list += values_presets
             values_list.append(values)
             last_id += 1
-
-        #     для указанного шейпа нужно проверить есть ли все указанные в пресете тэги
-        #     смотрим отчет для данного пользователя и проходимся по всем пресетам
 
         values = ', '.join(values_list)
         self.insert('Reports', ['id', 'user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
                                     'frames_count_today', 'frames_count_all_finish', 'shapes_count_today', 'shape_count_all'], values)
+        # values_presets = ', '.join(values_presets_list)
+        # self.insert('LabelReports', ['report_id', 'preset_id', 'shapes_count_today', 'shape_count_all'], values_presets)
+
+    def generate_values_for_presets(self, report_id: int, presets: dict, shapes: list, old_report_id: int = -1, new: bool = False):
+        values_presets_list = []
+        data_old_report = []
+
+        if not new:
+            ps = ParametersSelection()
+            # данные старого отчета
+            ps.add_equal('report_id', old_report_id, value_type=type(old_report_id))
+            data_old_report = self.select('LabelReports',
+                                          ['preset_id', 'shape_count_all'],
+                                          ps.get_parameters_selection())
+
+        for preset_id, preset in presets.items():
+            shapes_count = 0
+            values_presets = []
+            # list словарей с шейпами и их метками
+            for shape in shapes:
+                # получает количество нужных меток в шейпе
+                # TODO тут возникает ошибка с shape.values()
+                count_labels = len(list(set(shape.values()) & set(preset['labels_id'])))
+                if count_labels != 0:
+                    shapes_count += 1
+            if new:
+                values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count, shapes_count)]
+            else:
+                # вычитание прошлого отчета из актуальных данных
+                shapes_count_today = 0
+                match = False
+                for data in data_old_report:
+                    if data[0] == preset_id:
+                        shapes_count_today = shapes_count - data[1]
+                        match = True
+
+                # если это новый пресет, то записываем данные без вычитания
+                if not match:
+                    shapes_count_today = shapes_count
+
+                values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count_today, shapes_count)]
+            values_presets_list += values_presets
+        return values_presets_list
 
     @staticmethod
     def add_if_not_exists(lst, value):
@@ -404,11 +455,7 @@ class DataBase:
 
             # shape_and_labels
             # {
-            #     frame_id: [
-            #         label_id,
-            #         label_id
-            #     ],
-            #     frame_id: [
+            #     shape_id: [
             #         label_id,
             #         label_id
             #     ]
@@ -499,14 +546,15 @@ class DataBase:
         ps.add_equal('lp.preset_id', 'p.id', value_type=int)
         ps.add_equal('lp.label_id', 'l.id', value_type=int)
         selections = self.select('Presets as p, LabelsPresets as lp, Labels as l',
-                                 columns=['p.id', 'p.name', 'l.name'],
+                                 columns=['p.id', 'p.name', 'l.name', 'l.id'],
                                  constraints=ps.get_parameters_selection())
         presets = {}
         for s in selections:
             if presets.get(s[0]) is None:
-                presets[s[0]] = {'name': s[1], 'labels': [s[2]]}
+                presets[s[0]] = {'name': s[1], 'labels_name': [s[2]], 'labels_id': [s[3]]}
             else:
-                presets[s[0]]['labels'].append(s[2])
+                presets[s[0]]['labels_name'].append(s[2])
+                presets[s[0]]['labels_id'].append(s[3])
         print(presets)
         return presets
 
@@ -530,7 +578,7 @@ class DataBase:
             self.insert(table_name="Presets", params=['id', 'name'], values=data)
 
             data = ''
-            for label in preset['labels']:
+            for label in preset['labels_id']:
                 separator = ', '
                 if data == '':
                     separator = ''

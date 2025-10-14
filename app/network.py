@@ -14,7 +14,7 @@ class Networking:
         self.log.basicConfig(level=logging.INFO, filename="log.log",filemode="w")
 
     def load_config(self):
-        with open('config', 'r') as config_file:
+        with open('../config.json', 'r') as config_file:
             self.config = json.load(config_file)
 
     def init_session(self):
