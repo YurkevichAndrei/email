@@ -26,7 +26,7 @@ class Networking:
         except:
             return False
         self.headers = {'X-CSRFToken': self.session.cookies.get('csrftoken')}
-        print(self.session.cookies.get('csrftoken'))
+        # print(self.session.cookies.get('csrftoken'))
         if response.status_code == 200:
             return True
         else:
@@ -38,7 +38,7 @@ class Networking:
             response = self.session.post(url, headers=self.headers)
         except:
             return False
-        print(response.json())
+        # print(response.json())
         if response.status_code == 200:
             return True
         else:
@@ -50,7 +50,7 @@ class Networking:
             response = self.session.get(url, params=[('page_size', 200)])
         except:
             return None
-        print(response.json())
+        # print(response.json())
         return response.json()
 
     def get_tasks(self):
@@ -59,7 +59,7 @@ class Networking:
             response = self.session.get(url, params=[('page_size', 2000)])
         except:
             return None
-        print(response.json())
+        # print(response.json())
         return response.json()
 
     def get_users(self):
@@ -68,7 +68,7 @@ class Networking:
             response = self.session.get(url, params=[('page_size', 200)])
         except:
             return None
-        print(response.json())
+        # print(response.json())
         return response.json()
 
     def get_jobs(self):
@@ -77,7 +77,7 @@ class Networking:
             response = self.session.get(url, params=[('page_size', 200)])
         except:
             return None
-        print(response.json())
+        # print(response.json())
         return response.json()
 
     def get_job(self, job_id):
@@ -86,7 +86,7 @@ class Networking:
             response = self.session.get(url, params=[('page_size', 5000)])
         except:
             return None
-        print(response.json())
+        # print(response.json())
         return response.json()
 
     def get_job_annotations(self, job_id: int):
@@ -107,7 +107,7 @@ class Networking:
             response = self.session.get(url, params=params)
         except:
             return None
-        print(response.json())
+        # print(response.json())
         return response.json()
 
 # net = Networking()

@@ -424,6 +424,7 @@ class ConfigurationApp:
                                 max_id_preset = max(list(st.session_state.presets.keys()))
                             new_preset = {'name': "Новый пресет", "labels_name": []}
                             st.session_state.presets[max_id_preset+1] = new_preset
+                            print(f"пресетs: {st.session_state.presets}")
                             st.rerun()
 
                         if len(list(st.session_state.presets.keys())) != 0:

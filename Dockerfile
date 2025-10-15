@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cron \
     tzdata \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 ENV TZ=Europe/Moscow

@@ -29,13 +29,27 @@ fi
 # Запуск сервера FastAPI
 echo "Запуск сервера FastAPI на $SERVER_HOST:$SERVER_PORT..."
 uvicorn server:app --reload --host "$SERVER_HOST" --port "$SERVER_PORT" &
+FASTAPI_PID=$!
 
 # Ждем, пока сервер запустится (примерно 2 секунды)
 sleep 2
 
-# Запуск Streamlit-приложения
+# Запуск Streamlit-приложения в фоновом режиме
 echo "Запуск панели управления конфигурацией..."
-streamlit run config_app.py
+streamlit run config_app.py &
+STREAMLIT_PID=$!
 
-# Ожидание завершения всех процессов
-wait
+# Ждем, пока Streamlit полностью запустится
+sleep 3
+
+# Проверка наличия утилиты для открытия браузера
+OPEN_CMD="xdg-open"
+if ! command -v $OPEN_CMD &> /dev/null; then
+    OPEN_CMD="open"
+fi
+
+# Открываем веб-интерфейс Streamlit в браузере
+$OPEN_CMD "http://localhost:8501"
+
+# Ожидание завершения только FastAPI-сервера
+wait $FASTAPI_PID

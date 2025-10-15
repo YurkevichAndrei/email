@@ -299,7 +299,7 @@ class DataBase:
             return False
 
         reports = self.generate_reports()
-        print(reports)
+        # print(reports)
 
         # сначала получаем все пресеты
         presets = self.get_presets()
@@ -341,9 +341,9 @@ class DataBase:
                                                                    len(report['frames']),
                                                                    len(report['shapes']) - selection_all_params[0][2],
                                                                    len(report['shapes']))
-                # # расчитываем данные по пресетам
-                # if len(presets) != 0:
-                #     values_presets = self.generate_values_for_presets(last_id, presets, report['shapes'], old_report_id=last_id_report_user)
+                # расчитываем данные по пресетам
+                if len(presets) != 0:
+                    values_presets = self.generate_values_for_presets(last_id, presets, report['shapes'], old_report_id=last_id_report_user)
 
             # если отчетов нет
             else:
@@ -352,19 +352,19 @@ class DataBase:
                                                                    len(report['jobs']), len(report['jobs']),
                                                                    len(report['frames']), len(report['frames']),
                                                                    len(report['shapes']), len(report['shapes']))
-                # # расчитываем данные по пресетам
-                # if len(presets) != 0:
-                #     values_presets = self.generate_values_for_presets(last_id, presets, report['shapes'], new=True)
+                # расчитываем данные по пресетам
+                if len(presets) != 0:
+                    values_presets = self.generate_values_for_presets(last_id, presets, report['shapes'], new=True)
 
-            # values_presets_list += values_presets
+            values_presets_list += values_presets
             values_list.append(values)
             last_id += 1
 
         values = ', '.join(values_list)
         self.insert('Reports', ['id', 'user_id', 'datetime', 'jobs_count_today', 'jobs_count_all_finish',
                                     'frames_count_today', 'frames_count_all_finish', 'shapes_count_today', 'shape_count_all'], values)
-        # values_presets = ', '.join(values_presets_list)
-        # self.insert('LabelReports', ['report_id', 'preset_id', 'shapes_count_today', 'shape_count_all'], values_presets)
+        values_presets = ', '.join(values_presets_list)
+        self.insert('LabelReports', ['report_id', 'preset_id', 'shapes_count_today', 'shape_count_all'], values_presets)
 
     def generate_values_for_presets(self, report_id: int, presets: dict, shapes: list, old_report_id: int = -1, new: bool = False):
         values_presets_list = []
@@ -555,11 +555,11 @@ class DataBase:
             else:
                 presets[s[0]]['labels_name'].append(s[2])
                 presets[s[0]]['labels_id'].append(s[3])
-        print(presets)
+        # print(presets)
         return presets
 
     def set_presets(self, presets: dict):
-        print(presets)
+        # print(presets)
         #  проверка нет ли пресета с таким id
         #  если есть, то удалить все labelsPresets, которые с ним связаны, и добавить обновленные
         #  если нет, то просто добавляем пресет по полной
