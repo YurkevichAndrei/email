@@ -385,7 +385,8 @@ class DataBase:
             for shape in shapes:
                 # получает количество нужных меток в шейпе
                 # TODO тут возникает ошибка с shape.values()
-                count_labels = len(list(set(shape.values()) & set(preset['labels_id'])))
+                print(shape)
+                count_labels = len(list(set(shape['labels']) & set(preset['labels_id'])))
                 if count_labels != 0:
                     shapes_count += 1
             if new:
@@ -455,7 +456,8 @@ class DataBase:
 
             # shape_and_labels
             # {
-            #     shape_id: [
+            #     'shape': shape_id,
+            #     'labels': [
             #         label_id,
             #         label_id
             #     ]
@@ -502,17 +504,29 @@ class DataBase:
 
     def get_reports(self, date: datetime.date = datetime.date.today()):
         self.update_db_reports()
+        presets = self.get_presets()
         count_users = self.select('Users', ['count(*)'])[0][0]
         date = date.isoformat()
         ps = ParametersSelection()
         ps.add_equal("DATE(datetime)", date, value_type=type(date))
         reports = {}
-        selections = self.select(table_name='Reports', constraints=ps.get_parameters_selection(), sorting=['id DESC'], limit=count_users)
+        selections = self.select(table_name='Reports',
+                                 constraints=ps.get_parameters_selection(),
+                                 sorting=['id DESC'],
+                                 limit=count_users)
 
         for s in selections:
             if s[1] == -1: # user_id
                 continue
+            ps1 = ParametersSelection()
+            ps1.add_equal("report_id", s[0], value_type=type(s[0]))
+            label_reports = self.select(table_name='LabelReports',
+                                       columns=['preset_id', 'shapes_count_today', 'shape_count_all'],
+                                       constraints=ps1.get_parameters_selection())
             report = {'Задачи': s[3], 'Изображения': s[5], 'Объекты': s[7]}
+            for label_report in label_reports:
+                report[presets[label_report[0]]['name']] = label_report[1]
+                report[f"{presets[label_report[0]]['name']} всего"] = label_report[2]
             # user_id
             reports[s[1]] = report
         return reports
@@ -548,6 +562,7 @@ class DataBase:
         selections = self.select('Presets as p, LabelsPresets as lp, Labels as l',
                                  columns=['p.id', 'p.name', 'l.name', 'l.id'],
                                  constraints=ps.get_parameters_selection())
+        print(f"selections: {selections}")
         presets = {}
         for s in selections:
             if presets.get(s[0]) is None:
@@ -555,7 +570,7 @@ class DataBase:
             else:
                 presets[s[0]]['labels_name'].append(s[2])
                 presets[s[0]]['labels_id'].append(s[3])
-        # print(presets)
+        print(presets)
         return presets
 
     def set_presets(self, presets: dict):

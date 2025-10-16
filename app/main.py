@@ -25,7 +25,8 @@ class Report:
     def generate_report(self):
         reports = self.db.get_reports(date.today())
         reports = self.filter_report(reports, self.config['report']['users'])
-        report_path = self.create_excel_from_dict_list(self.transform_data(reports),
+        data = self.add_all_count_data(self.transform_data(reports))
+        report_path = self.create_excel_from_dict_list(data,
                                                   f'report_{datetime.now().strftime('%d-%m-%Y_%H:%M')}.xlsx',
                                                   'report')
         return report_path
@@ -86,6 +87,22 @@ class Report:
             result.append(user_dict)
 
         return result
+
+    @staticmethod
+    def add_all_count_data(data: list[dict]):
+        count_data_dict = {'Номер': '',
+                           'Имя пользователя': '',
+                           'Имя Фамилия': ''}
+        for user_dict in data:
+            item_list = [(category, item) for category, item in user_dict.items()]
+
+            for i in range(3, len(item_list)):
+                if count_data_dict.get(item_list[i][0]) is None:
+                    count_data_dict[item_list[i][0]] = item_list[i][1]
+                else:
+                    count_data_dict[item_list[i][0]] += item_list[i][1]
+        data.append(count_data_dict)
+        return data
 
     def create_excel_from_dict_list(self, dict_list: list, output_filename: str, sheet_name='Sheet1'):
         # Создаем директорию, если она не существует

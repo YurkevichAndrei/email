@@ -394,11 +394,7 @@ class ConfigurationApp:
                             st.session_state.presets = {}
                         url = f"{self.server_path}/db/presets"
                         response = requests.get(url)
-                        st.session_state.presets = response.json()
-                        if st.session_state.presets.get('detail') == 'Not Found':
-                            st.session_state.presets = {}
-                        else:
-                            st.session_state.presets = {int(i): preset for i, preset in st.session_state.presets.items()}
+                        st.session_state.presets = st.session_state.presets | {int(i): preset for i, preset in response.json().items()}
                         # st.session_state.presets = {
                         #     0: {
                         #         "name": "пресет 1",
@@ -424,7 +420,6 @@ class ConfigurationApp:
                                 max_id_preset = max(list(st.session_state.presets.keys()))
                             new_preset = {'name': "Новый пресет", "labels_name": []}
                             st.session_state.presets[max_id_preset+1] = new_preset
-                            print(f"пресетs: {st.session_state.presets}")
                             st.rerun()
 
                         if len(list(st.session_state.presets.keys())) != 0:
