@@ -92,7 +92,7 @@ class Report:
     def add_all_count_data(data: list[dict]):
         count_data_dict = {'Номер': '',
                            'Имя пользователя': '',
-                           'Имя Фамилия': ''}
+                           'Имя Фамилия': 'Итого'}
         for user_dict in data:
             item_list = [(category, item) for category, item in user_dict.items()]
 

@@ -72,6 +72,32 @@ class DataBase:
         cursor.close()
         self.db.commit()
 
+    def update(self, table_name: str, data_update: dict, constraints: list[str] = ()):
+        request = f'UPDATE {table_name} SET'
+
+        if len(data_update) == 0:
+            return
+
+        data = ''
+        for key, value in data_update.items():
+            separator = ', '
+            if data == '':
+                separator = ''
+            if type(value) == str:
+                value = f'"{value}"'
+            data = separator.join([data, f'{key} = {value}'])
+        request = ' '.join([request, data])
+
+        if len(constraints) != 0:
+            constr = ' AND '.join([c for c in constraints])
+            request = ' WHERE '.join([request, constr])
+
+        self.network.log.info(request)
+        cursor = self.db.cursor()
+        cursor.execute(request)
+        cursor.close()
+        self.db.commit()
+
     def create_db(self):
         cursor = self.db.cursor()
         request = 'CREATE TABLE Projects (id int primary key , name varchar(200))'
@@ -579,6 +605,12 @@ class DataBase:
         #  если есть, то удалить все labelsPresets, которые с ним связаны, и добавить обновленные
         #  если нет, то просто добавляем пресет по полной
         presets_db = [s[0] for s in self.select(table_name='Presets', columns=['id'])]
+        presets_new = [i for i, _ in presets.items()]
+        presets_old = list(set(presets_db) - set(presets_new))
+        del_old = ParametersSelection()
+        for i in presets_old:
+            del_old.add_equal("preset_id", i, value_type=type(i))
+        self.delete(table_name='LabelsPresets', constraints=del_old.get_parameters_selection())
         for i, preset in presets.items():
             # если пресет с таким id уже существует
             if i in presets_db:

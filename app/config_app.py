@@ -392,9 +392,15 @@ class ConfigurationApp:
                         # Инициализация данных в session_state
                         if 'presets' not in st.session_state:
                             st.session_state.presets = {}
-                        url = f"{self.server_path}/db/presets"
-                        response = requests.get(url)
-                        st.session_state.presets = st.session_state.presets | {int(i): preset for i, preset in response.json().items()}
+                            url = f"{self.server_path}/db/presets"
+                            response = requests.get(url)
+                        # st.session_state.presets = st.session_state.presets | {int(i): preset for i, preset in response.json().items()}
+                            st.session_state.presets = {int(i): preset for i, preset in response.json().items()}
+
+                        if 'max_id_preset' not in st.session_state:
+                            st.session_state.max_id_preset = 0
+                            if len(list(st.session_state.presets.keys())) != 0:
+                                st.session_state.max_id_preset = max(list(st.session_state.presets.keys()))
                         # st.session_state.presets = {
                         #     0: {
                         #         "name": "пресет 1",
@@ -414,12 +420,10 @@ class ConfigurationApp:
                         #     },
                         # }
                         if st.form_submit_button("Добавить пресет", key="new_button"):
-                            # TODO нужно создавать новый id пресета, а не начинать с 1
-                            max_id_preset = 0
-                            if len(list(st.session_state.presets.keys())) != 0:
-                                max_id_preset = max(list(st.session_state.presets.keys()))
                             new_preset = {'name': "Новый пресет", "labels_name": []}
-                            st.session_state.presets[max_id_preset+1] = new_preset
+                            st.session_state.presets[st.session_state.max_id_preset+1] = new_preset
+                            st.session_state.max_id_preset += 1
+                            st.session_state.app_config['report']['presets'] = list(st.session_state.presets.keys())
                             st.rerun()
 
                         if len(list(st.session_state.presets.keys())) != 0:
@@ -433,8 +437,12 @@ class ConfigurationApp:
                                 # Проверяем, существует ли еще пресет (мог быть удален в предыдущей итерации)
                                 if i not in st.session_state.presets.keys():
                                     continue
+                                if i not in st.session_state.app_config['report']['presets']:
+                                    continue
                                 with st.expander(st.session_state.presets[i]['name']):
-                                    st.session_state.presets[i]['name'] = st.text_input("Имя", value=st.session_state.presets[i]['name'], key=f"name_{i}")
+                                    st.session_state.presets[i]['name'] = st.text_input("Имя",
+                                                                                        value=st.session_state.presets[i]['name'],
+                                                                                        key=f"name_{i}")
                                     st.session_state.presets[i]['labels_name'] = st.multiselect(
                                         "Выберите опции",
                                         st.session_state.labels.keys(),
@@ -542,6 +550,9 @@ class ConfigurationApp:
                             presets[i] = {'name': st.session_state.presets[i]['name'], 'labels_id': []}
                             for label in st.session_state.presets[i]['labels_name']:
                                 presets[i]['labels_id'].append(st.session_state.labels[label])
+                            if len(presets[i]['labels_id']) == 0:
+                                presets.pop(i)
+                                st.session_state.presets.pop(i)
 
                     url = f"{self.server_path}/db/presets"
                     requests.post(url, json=presets)
