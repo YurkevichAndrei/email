@@ -71,10 +71,13 @@ class Networking:
         # print(response.json())
         return response.json()
 
-    def get_jobs(self):
+    def get_jobs(self, project_id: int = None):
         url = '%s/api/jobs'%(self.config["cvat"]["url"])
+        params = [('page_size', 5000)]
+        if not (project_id is None):
+            params.append(('project_id', project_id))
         try:
-            response = self.session.get(url, params=[('page_size', 200)])
+            response = self.session.get(url, params=params)
         except:
             return None
         # print(response.json())
@@ -112,5 +115,5 @@ class Networking:
 
 # net = Networking()
 # net.init_session()
-# net.get_labels()
+# json.dump(net.get_job_annotations(397), open('../test.json', 'w'))
 # net.close_session()

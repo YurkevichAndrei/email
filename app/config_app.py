@@ -437,8 +437,6 @@ class ConfigurationApp:
                                 # Проверяем, существует ли еще пресет (мог быть удален в предыдущей итерации)
                                 if i not in st.session_state.presets.keys():
                                     continue
-                                if i not in st.session_state.app_config['report']['presets']:
-                                    continue
                                 with st.expander(st.session_state.presets[i]['name']):
                                     st.session_state.presets[i]['name'] = st.text_input("Имя",
                                                                                         value=st.session_state.presets[i]['name'],
@@ -451,6 +449,7 @@ class ConfigurationApp:
                                         )
                                     if st.form_submit_button("Удалить пресет", key=f"del_button_{i}"):
                                         st.session_state.presets.pop(i)
+                                        print(f"Удален пресет с id {i} \nПресеты: {st.session_state.presets}")
                                         st.rerun()
 
                     with tab16:

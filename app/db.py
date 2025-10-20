@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import os
 import datetime
@@ -403,18 +404,19 @@ class DataBase:
             data_old_report = self.select('LabelReports',
                                           ['preset_id', 'shape_count_all'],
                                           ps.get_parameters_selection())
-
+        print(shapes)
         for preset_id, preset in presets.items():
             shapes_count = 0
             values_presets = []
             # list словарей с шейпами и их метками
+
             for shape in shapes:
                 # получает количество нужных меток в шейпе
-                # TODO тут возникает ошибка с shape.values()
-                print(shape)
-                count_labels = len(list(set(shape['labels']) & set(preset['labels_id'])))
-                if count_labels != 0:
+                labels = list(set(shape['labels']) & set(preset['labels_id']))
+                # если добавить второе условие, то будет И, иначне будет ИЛИ
+                if len(labels) != 0 and set(labels) == set(preset['labels_id']):
                     shapes_count += 1
+            print(f"{preset_id} {preset['name']} {shapes_count}")
             if new:
                 values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count, shapes_count)]
             else:
@@ -471,7 +473,7 @@ class DataBase:
         # }
         # сбор информации о количестве задач, изображений и объектов
         reports = {}
-        jobs = self.network.get_jobs()['results']
+        jobs = self.network.get_jobs(project_id=self.network.config['report']['project'])['results']
         for job in jobs:
             assignee = job['assignee']
             assignee_id = -1
@@ -492,10 +494,10 @@ class DataBase:
             # перед тем как формировать словарь по объектам, нужно сформировать словарь с тегами по фреймам
             labels = {}
             for label in annotations['tags']:
-                if labels.get(label['frame']) is None:
-                    labels[label['frame']] = [label['label_id']]
+                if labels.get(f'{job['id']}:{label['frame']}') is None:
+                    labels[f'{job['id']}:{label['frame']}'] = [label['label_id']]
                 else:
-                    labels[label['frame']].append(label['label_id'])
+                    labels[f'{job['id']}:{label['frame']}'].append(label['label_id'])
 
             if reports.get(assignee_id) is None:
                 reports[assignee_id] = {'jobs': [], 'frames': [], 'shapes': []}
@@ -505,7 +507,7 @@ class DataBase:
 
             for shape in annotations['shapes']:
                 report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
-                labs = labels.get(shape['frame'])
+                labs = labels.get(f'{job['id']}:{shape['frame']}')
                 shape_and_labels = {}
                 if labs is None:
                     shape_and_labels = {'shape': shape['id'], 'labels': [shape['label_id']]}
@@ -606,11 +608,19 @@ class DataBase:
         #  если нет, то просто добавляем пресет по полной
         presets_db = [s[0] for s in self.select(table_name='Presets', columns=['id'])]
         presets_new = [i for i, _ in presets.items()]
+        # в presets_old хранятся id пресетов, которые есть в бд, но не в новом списке
         presets_old = list(set(presets_db) - set(presets_new))
-        del_old = ParametersSelection()
-        for i in presets_old:
-            del_old.add_equal("preset_id", i, value_type=type(i))
-        self.delete(table_name='LabelsPresets', constraints=del_old.get_parameters_selection())
+        if len(presets_old) != 0:
+            del_old = ParametersSelection()
+            del_old_presets = ParametersSelection()
+            # все что есть в presets_old удаляем
+            for i in presets_old:
+                del_old.add_equal("preset_id", i, value_type=type(i))
+                del_old_presets.add_equal("id", i, value_type=type(i))
+            self.delete(table_name='LabelsPresets', constraints=del_old.get_parameters_selection())
+            self.delete(table_name='LabelReports', constraints=del_old.get_parameters_selection())
+            self.delete(table_name='Presets', constraints=del_old_presets.get_parameters_selection())
+
         for i, preset in presets.items():
             # если пресет с таким id уже существует
             if i in presets_db:
@@ -632,6 +642,16 @@ class DataBase:
                 data = separator.join([data, f'({i}, {label})'])
             self.insert(table_name="LabelsPresets", params=['preset_id', 'label_id'], values=data)
 
+    def update_users(self):
+        if self.db is None:
+            return False
+        users = self.network.get_users()['results']
+
+        for user in users:
+            ps = ParametersSelection()
+            ps.add_equal('id', user['id'], value_type=type(user['id']))
+            data = {'username': user['username'], 'first_name': user['first_name'], 'last_name': user['last_name']}
+            self.update(table_name='Users', data_update=data, constraints=ps.get_parameters_selection())
 
 # db = DataBase()
-# db.update_db()
+# db.update_users()
