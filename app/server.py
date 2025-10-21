@@ -14,7 +14,7 @@ def update_db():
 @app.get("/db/users")
 def db_get_users():
     users = rep.db.get_users()
-    print(users)
+    # print(users)
     return users
 
 @app.get("/report/new")
@@ -24,22 +24,22 @@ def generate_report():
 @app.get("/db/projects")
 def db_get_projects():
     projects = rep.db.get_projects()
-    print(projects)
+    # print(projects)
     return projects
 
 @app.get("/db/labels")
 def db_get_labels(project_id: int):
     labels = rep.db.get_labels(project_id)
-    print(labels)
+    # print(labels)
     return labels
 
 @app.get("/db/presets")
 def db_get_presets():
     presets = rep.db.get_presets()
-    print(presets)
+    # print(presets)
     return presets
 
 @app.post("/db/presets")
 def db_set_presets(presets: Dict[int, Any]):
-    print(presets)
+    # print(presets)
     return rep.db.set_presets(presets)

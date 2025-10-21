@@ -27,7 +27,6 @@ class Report:
         reports = self.db.get_reports(date.today())
         reports = self.filter_report(reports, self.config['report']['users'])
         data = self.add_all_count_data(self.transform_data(reports))
-        print(data)
         report_path = self.create_excel_from_dict_list(data,
                                                   f'report_{datetime.now().strftime('%d-%m-%Y_%H:%M')}.xlsx',
                                                   'report')

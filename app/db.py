@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import os
 import datetime
@@ -330,7 +331,8 @@ class DataBase:
         # сначала получаем все пресеты
         presets = self.get_presets()
 
-        last_id = self.select('Reports', ['max(id)'])[0][0] + 1
+        result = self.select('Reports', ['max(id)'])[0][0]
+        last_id = (result if result is not None else 0) + 1
 
         values_list = []
         values_presets_list = []
@@ -392,46 +394,84 @@ class DataBase:
         values_presets = ', '.join(values_presets_list)
         self.insert('LabelReports', ['report_id', 'preset_id', 'shapes_count_today', 'shape_count_all'], values_presets)
 
-    def generate_values_for_presets(self, report_id: int, presets: dict, shapes: list, old_report_id: int = -1, new: bool = False):
+    # def generate_values_for_presets(self, report_id: int, presets: dict, shapes: list, old_report_id: int = -1, new: bool = False):
+    #     values_presets_list = []
+    #     data_old_report = []
+    #
+    #     if not new:
+    #         ps = ParametersSelection()
+    #         # данные старого отчета
+    #         ps.add_equal('report_id', old_report_id, value_type=type(old_report_id))
+    #         data_old_report = self.select('LabelReports',
+    #                                       ['preset_id', 'shape_count_all'],
+    #                                       ps.get_parameters_selection())
+    #     for preset_id, preset in presets.items():
+    #         shapes_count = 0
+    #         values_presets = []
+    #         # list словарей с шейпами и их метками
+    #
+    #         for shape in shapes:
+    #             # получает количество нужных меток в шейпе
+    #             labels = list(set(shape['labels']) & set(preset['labels_id']))
+    #             # если добавить второе условие, то будет И, иначне будет ИЛИ
+    #             if (len(labels) != 0) and (set(labels) == set(preset['labels_id'])):
+    #                 shapes_count += 1
+    #         # print(f"{preset_id} {preset['name']} {shapes_count}")
+    #         if new:
+    #             values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count, shapes_count)]
+    #         else:
+    #             # вычитание прошлого отчета из актуальных данных
+    #             shapes_count_today = 0
+    #             match = False
+    #             for data in data_old_report:
+    #                 if data[0] == preset_id:
+    #                     shapes_count_today = shapes_count - data[1]
+    #                     match = True
+    #
+    #             # если это новый пресет, то записываем данные без вычитания
+    #             if not match:
+    #                 shapes_count_today = shapes_count
+    #
+    #             values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count_today, shapes_count)]
+    #         values_presets_list += values_presets
+    #     return values_presets_list
+
+    def generate_values_for_presets(self, report_id: int, presets: dict, shapes: list, old_report_id: int = None, new: bool = False):
         values_presets_list = []
-        data_old_report = []
 
-        if not new:
+        # Заранее подготовим множества меток для пресетов
+        preset_labels = {preset_id: set(preset['labels_id']) for preset_id, preset in presets.items()}
+
+        # Подсчитаем количество фигур для каждого пресета
+        preset_counts = {preset_id: 0 for preset_id in presets}
+
+        for shape in shapes:
+            shape_labels = set(shape['labels'])
+            for preset_id, preset_label_set in preset_labels.items():
+                # Логическое ИЛИ: если есть хотя бы одно совпадение
+                if shape_labels & preset_label_set:
+                    preset_counts[preset_id] += 1
+
+        # Получаем данные старого отчета если нужно
+        old_counts = {}
+        if not new and old_report_id:
             ps = ParametersSelection()
-            # данные старого отчета
             ps.add_equal('report_id', old_report_id, value_type=type(old_report_id))
-            data_old_report = self.select('LabelReports',
-                                          ['preset_id', 'shape_count_all'],
-                                          ps.get_parameters_selection())
-        for preset_id, preset in presets.items():
-            shapes_count = 0
-            values_presets = []
-            # list словарей с шейпами и их метками
+            old_data = self.select('LabelReports', ['preset_id', 'shape_count_all'], ps.get_parameters_selection())
+            old_counts = {row[0]: row[1] for row in old_data}
 
-            for shape in shapes:
-                # получает количество нужных меток в шейпе
-                labels = list(set(shape['labels']) & set(preset['labels_id']))
-                # если добавить второе условие, то будет И, иначне будет ИЛИ
-                if (len(labels) != 0) and (set(labels) == set(preset['labels_id'])):
-                    shapes_count += 1
-            # print(f"{preset_id} {preset['name']} {shapes_count}")
+        # Формируем значения для вставки
+        for preset_id, current_count in preset_counts.items():
             if new:
-                values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count, shapes_count)]
+                shapes_count_today = current_count
             else:
-                # вычитание прошлого отчета из актуальных данных
-                shapes_count_today = 0
-                match = False
-                for data in data_old_report:
-                    if data[0] == preset_id:
-                        shapes_count_today = shapes_count - data[1]
-                        match = True
+                old_count = old_counts.get(preset_id, 0)
+                shapes_count_today = current_count - old_count
+                # Защита от отрицательных значений (на случай удаления данных)
+                shapes_count_today = max(0, shapes_count_today)
 
-                # если это новый пресет, то записываем данные без вычитания
-                if not match:
-                    shapes_count_today = shapes_count
-
-                values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count_today, shapes_count)]
-            values_presets_list += values_presets
+            values_presets_list.append('(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count_today, current_count))
+        print(values_presets_list)
         return values_presets_list
 
     @staticmethod
@@ -456,6 +496,66 @@ class DataBase:
         else:
             return lst
 
+    # def generate_reports(self):
+    #     # {
+    #     #     1: {
+    #     #         'jobs': [1, 2, 3 ...],
+    #     #         'frames': [1, 2, 3 ...],
+    #     #         'shapes': [shape_and_labels, shape_and_labels, shape_and_labels ...]
+    #     #     },
+    #     #     2: {
+    #     #         'jobs': [1, 2, 3 ...],
+    #     #         'frames': [1, 2, 3 ...],
+    #     #         'shapes': [shape_and_labels, shape_and_labels, shape_and_labels ...]
+    #     #     },
+    #     # }
+    #     # сбор информации о количестве задач, изображений и объектов
+    #     reports = {}
+    #     jobs = self.network.get_jobs(project_id=self.network.config['report']['project'])['results']
+    #     for job in jobs:
+    #         assignee = job['assignee']
+    #         assignee_id = -1
+    #         if not (assignee is None):
+    #             assignee_id = assignee['id']
+    #
+    #         annotations = self.network.get_job_annotations(job['id'])
+    #
+    #         # shape_and_labels
+    #         # {
+    #         #     'shape': shape_id,
+    #         #     'labels': [
+    #         #         label_id,
+    #         #         label_id
+    #         #     ]
+    #         # }
+    #
+    #         # перед тем как формировать словарь по объектам, нужно сформировать словарь с тегами по фреймам
+    #         labels = {}
+    #         for label in annotations['tags']:
+    #             if labels.get(f'{job['id']}:{label['frame']}') is None:
+    #                 labels[f'{job['id']}:{label['frame']}'] = [label['label_id']]
+    #             else:
+    #                 labels[f'{job['id']}:{label['frame']}'].append(label['label_id'])
+    #
+    #         if reports.get(assignee_id) is None:
+    #             reports[assignee_id] = {'jobs': [], 'frames': [], 'shapes': []}
+    #
+    #         report = reports.get(assignee_id)
+    #         report['jobs'] = self.add_if_not_exists(report['jobs'], job['id'])
+    #
+    #         for shape in annotations['shapes']:
+    #             report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
+    #             labs = labels.get(f'{job['id']}:{shape['frame']}')
+    #             shape_and_labels = {}
+    #             if labs is None:
+    #                 shape_and_labels = {'shape': shape['id'], 'labels': [shape['label_id']]}
+    #             else:
+    #                 shape_and_labels = {'shape': shape['id'], 'labels': labs}
+    #                 shape_and_labels['labels'].append(shape['label_id'])
+    #             report['shapes'] = self.add_if_not_exists(report['shapes'], shape_and_labels)
+    #         reports[assignee_id] = report
+    #     return reports
+
     def generate_reports(self):
         # {
         #     1: {
@@ -472,48 +572,52 @@ class DataBase:
         # сбор информации о количестве задач, изображений и объектов
         reports = {}
         jobs = self.network.get_jobs(project_id=self.network.config['report']['project'])['results']
-        for job in jobs:
-            assignee = job['assignee']
-            assignee_id = -1
-            if not (assignee is None):
-                assignee_id = assignee['id']
 
+        for job in jobs:
+            assignee_id = -1 if job['assignee'] is None else job['assignee']['id']
             annotations = self.network.get_job_annotations(job['id'])
 
-            # shape_and_labels
-            # {
-            #     'shape': shape_id,
-            #     'labels': [
-            #         label_id,
-            #         label_id
-            #     ]
-            # }
+            if assignee_id not in reports:
+                reports[assignee_id] = {'jobs': set(), 'frames': set(), 'shapes': {}}
 
-            # перед тем как формировать словарь по объектам, нужно сформировать словарь с тегами по фреймам
-            labels = {}
-            for label in annotations['tags']:
-                if labels.get(f'{job['id']}:{label['frame']}') is None:
-                    labels[f'{job['id']}:{label['frame']}'] = [label['label_id']]
-                else:
-                    labels[f'{job['id']}:{label['frame']}'].append(label['label_id'])
+            report = reports[assignee_id]
+            report['jobs'].add(job['id'])
 
-            if reports.get(assignee_id) is None:
-                reports[assignee_id] = {'jobs': [], 'frames': [], 'shapes': []}
-
-            report = reports.get(assignee_id)
-            report['jobs'] = self.add_if_not_exists(report['jobs'], job['id'])
+            # Собираем теги по фреймам
+            frame_tags = {}
+            for tag in annotations['tags']:
+                frame_key = f"{job['id']}:{tag['frame']}"
+                if frame_key not in frame_tags:
+                    frame_tags[frame_key] = set()
+                frame_tags[frame_key].add(tag['label_id'])
 
             for shape in annotations['shapes']:
-                report['frames'] = self.add_if_not_exists(report['frames'], f'{job['id']}:{shape['frame']}')
-                labs = labels.get(f'{job['id']}:{shape['frame']}')
-                shape_and_labels = {}
-                if labs is None:
-                    shape_and_labels = {'shape': shape['id'], 'labels': [shape['label_id']]}
-                else:
-                    shape_and_labels = {'shape': shape['id'], 'labels': labs}
-                    shape_and_labels['labels'].append(shape['label_id'])
-                report['shapes'] = self.add_if_not_exists(report['shapes'], shape_and_labels)
-            reports[assignee_id] = report
+                frame_key = f"{job['id']}:{shape['frame']}"
+                report['frames'].add(frame_key)
+
+                # Формируем уникальные метки для shape
+                shape_labels = set()
+                shape_labels.add(shape['label_id'])  # Метка самой фигуры
+
+                # Добавляем теги фрейма, если есть
+                if frame_key in frame_tags:
+                    shape_labels.update(frame_tags[frame_key])
+
+                shape_key = f"{job['id']}:{shape['id']}"
+                if shape_key not in report['shapes']:
+                    report['shapes'][shape_key] = {
+                        'shape': shape['id'],
+                        'labels': list(shape_labels)
+                    }
+
+        # Конвертируем обратно в списки для совместимости
+        for assignee_id in reports:
+            reports[assignee_id]['jobs'] = list(reports[assignee_id]['jobs'])
+            reports[assignee_id]['frames'] = list(reports[assignee_id]['frames'])
+            reports[assignee_id]['shapes'] = list(reports[assignee_id]['shapes'].values())
+            if assignee_id == 21:
+                json.dump(reports[assignee_id], open('../test1.json', 'w'))
+
         return reports
 
     def get_users(self):
@@ -588,7 +692,7 @@ class DataBase:
         selections = self.select('Presets as p, LabelsPresets as lp, Labels as l',
                                  columns=['p.id', 'p.name', 'l.name', 'l.id'],
                                  constraints=ps.get_parameters_selection())
-        print(f"selections: {selections}")
+        # print(f"selections: {selections}")
         presets = {}
         for s in selections:
             if presets.get(s[0]) is None:
@@ -596,7 +700,7 @@ class DataBase:
             else:
                 presets[s[0]]['labels_name'].append(s[2])
                 presets[s[0]]['labels_id'].append(s[3])
-        print(presets)
+        # print(presets)
         return presets
 
     def set_presets(self, presets: dict):
