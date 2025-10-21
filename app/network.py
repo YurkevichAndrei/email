@@ -98,7 +98,7 @@ class Networking:
             response = self.session.get(url, params=[('page_size', 2000)])
         except:
             return None
-        self.log.info(response.json()['shapes'])
+        # self.log.info(response.json()['shapes'])
         return response.json()
 
     def get_labels(self, job_id: int = None):

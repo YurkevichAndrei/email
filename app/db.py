@@ -1,4 +1,3 @@
-import json
 import sqlite3
 import os
 import datetime
@@ -64,7 +63,7 @@ class DataBase:
         request = f'DELETE FROM {table_name}'
 
         if len(constraints) != 0:
-            constr = ' AND '.join([c for c in constraints])
+            constr = ' OR '.join([c for c in constraints])
             request = ' WHERE '.join([request, constr])
 
         self.network.log.info(request)
@@ -404,7 +403,6 @@ class DataBase:
             data_old_report = self.select('LabelReports',
                                           ['preset_id', 'shape_count_all'],
                                           ps.get_parameters_selection())
-        print(shapes)
         for preset_id, preset in presets.items():
             shapes_count = 0
             values_presets = []
@@ -414,9 +412,9 @@ class DataBase:
                 # получает количество нужных меток в шейпе
                 labels = list(set(shape['labels']) & set(preset['labels_id']))
                 # если добавить второе условие, то будет И, иначне будет ИЛИ
-                if len(labels) != 0 and set(labels) == set(preset['labels_id']):
+                if (len(labels) != 0) and (set(labels) == set(preset['labels_id'])):
                     shapes_count += 1
-            print(f"{preset_id} {preset['name']} {shapes_count}")
+            # print(f"{preset_id} {preset['name']} {shapes_count}")
             if new:
                 values_presets = ['(%d, %d, %d, %d)' % (report_id, preset_id, shapes_count, shapes_count)]
             else:
@@ -551,7 +549,7 @@ class DataBase:
             label_reports = self.select(table_name='LabelReports',
                                        columns=['preset_id', 'shapes_count_today', 'shape_count_all'],
                                        constraints=ps1.get_parameters_selection())
-            report = {'Задачи': s[3], 'Изображения': s[5], 'Объекты': s[7]}
+            report = {'Задачи': s[3], 'Изображения': s[5], 'Объекты': s[7], 'Всего объектов': s[8]}
             for label_report in label_reports:
                 report[presets[label_report[0]]['name']] = label_report[1]
                 report[f"{presets[label_report[0]]['name']} всего"] = label_report[2]
@@ -641,6 +639,10 @@ class DataBase:
                     separator = ''
                 data = separator.join([data, f'({i}, {label})'])
             self.insert(table_name="LabelsPresets", params=['preset_id', 'label_id'], values=data)
+
+    def update_config(self):
+        self.network.load_config()
+        return self.network.config
 
     def update_users(self):
         if self.db is None:

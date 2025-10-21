@@ -11,25 +11,30 @@ class Report:
     def __init__(self):
         self.db = DataBase()
         self.db.update_db()
-        self.config = {}
-        self.load_config()
+        self.config = self.db.network.config
+        # self.load_config()
 
-    def load_config(self):
-        with open('../config.json', 'r') as config_file:
-            self.config = json.load(config_file)
+    # def load_config(self):
+    #     with open('../config.json', 'r') as config_file:
+    #         self.config = json.load(config_file)
 
     @staticmethod
     def filter_report(data, keys):
         return {key: value for key, value in data.items() if key in keys}
 
     def generate_report(self):
+        self.udpate_config()
         reports = self.db.get_reports(date.today())
         reports = self.filter_report(reports, self.config['report']['users'])
         data = self.add_all_count_data(self.transform_data(reports))
+        print(data)
         report_path = self.create_excel_from_dict_list(data,
                                                   f'report_{datetime.now().strftime('%d-%m-%Y_%H:%M')}.xlsx',
                                                   'report')
         return report_path
+
+    def udpate_config(self):
+        self.config = self.db.update_config()
 
     def send_email(self, report_path):
         sender_email = self.config['email']['sender']['email']
