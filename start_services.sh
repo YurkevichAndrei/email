@@ -28,7 +28,7 @@ fi
 
 # Запуск сервера FastAPI
 echo "Запуск сервера FastAPI на $SERVER_HOST:$SERVER_PORT..."
-uvicorn server:app --reload --host "$SERVER_HOST" --port "$SERVER_PORT" &
+uvicorn server:app --host "$SERVER_HOST" --port "$SERVER_PORT" &
 FASTAPI_PID=$!
 
 # Ждем, пока сервер запустится (примерно 2 секунды)
@@ -50,6 +50,11 @@ fi
 
 # Открываем веб-интерфейс Streamlit в браузере
 $OPEN_CMD "http://localhost:8501"
+
+# Запуск скрипта генерации отчета по расписанию
+echo "Запуск скрипта генерации отчета по расписанию..."
+python autoreport.py &
+AUTOREPORT_PID=$!
 
 # Ожидание завершения только FastAPI-сервера
 wait $FASTAPI_PID

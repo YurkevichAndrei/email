@@ -24,7 +24,7 @@ COPY app/ ./app/
 # RUN chmod 0644 /etc/cron.d/my-crontab && \
 #     crontab /etc/cron.d/my-crontab && \
 #     touch /var/log/cron.log
-RUN sh -c 'echo "30 23   * * 1-5 root    cd /app/app && /usr/local/bin/python3 /app/app/main.py" >> /etc/crontab'
+# RUN sh -c 'echo "30 23   * * 1-5 root    cd /app/app && /usr/local/bin/python3 /app/app/main.py" >> /etc/crontab'
 
 # Настройки Streamlit
 ENV STREAMLIT_SERVER_HEADLESS=true \
@@ -34,4 +34,5 @@ ENV STREAMLIT_SERVER_HEADLESS=true \
 EXPOSE 50001
 
 # Запуск через shell чтобы управлять несколькими процессами
-CMD ["sh", "-c", "cron && cd app && streamlit run config_app.py"]
+# CMD ["sh", "-c", "cron && cd app && streamlit run config_app.py"]
+CMD ["sh", "-c", "./start_services.sh"]

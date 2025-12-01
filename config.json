@@ -1,0 +1,70 @@
+{
+    "cvat": {
+        "url": "http://neuron.npomis.ru:8080",
+        "user": {
+            "username": "ayurkevich",
+            "email": "ayurkevich@npomis.ru",
+            "password": "ePu9ahga"
+        }
+    },
+    "email": {
+        "smtp": {
+            "host": "smtp.npomis.ru",
+            "port": 25
+        },
+        "sender": {
+            "username": "ayurkevich",
+            "email": "ayurkevich@npomis.ru",
+            "password": "ePu9ahga"
+        },
+        "recipient": {
+            "emails": [
+                "ad6803884@yandex.ru",
+                "i@ayurkevich.ru"
+            ]
+        }
+    },
+    "report": {
+        "project": 38,
+        "folder_path": "reports",
+        "users": [
+            36,
+            35,
+            34,
+            32,
+            31,
+            28,
+            27,
+            26,
+            21,
+            19,
+            38
+        ],
+        "presets": [
+            2,
+            4,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+        ],
+        "server": {
+            "host": "http://127.0.0.1",
+            "port": 5152
+        }
+    }
+}

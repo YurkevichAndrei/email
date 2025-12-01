@@ -653,7 +653,7 @@ class DataBase:
             label_reports = self.select(table_name='LabelReports',
                                        columns=['preset_id', 'shapes_count_today', 'shape_count_all'],
                                        constraints=ps1.get_parameters_selection())
-            report = {'Задачи': s[3], 'Изображения': s[5], 'Объекты': s[7], 'Всего объектов': s[8]}
+            report = {'Задачи': s[3], 'Изображения': s[5], 'Всего изображений': s[6], 'Объекты': s[7], 'Всего объектов': s[8]}
             for label_report in label_reports:
                 report[presets[label_report[0]]['name']] = label_report[1]
                 report[f"{presets[label_report[0]]['name']} всего"] = label_report[2]
